@@ -1,0 +1,13 @@
+name = "GraphBasedSystems"
+uuid = "c7b9bcad-ccd7-4721-b0c6-1499c55cf356"
+authors = ["Jan Bruedigam"]
+version = "0.1.0"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
