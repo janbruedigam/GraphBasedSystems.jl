@@ -13,9 +13,24 @@ end
 
 function ldu_factorization!(system)
     matrixentries = system.matrixentries
+    acyclic_children = system.acyclic_children
+    cycles = system.cycles
 
     for v in system.dfs_list
-        for c in children(system,v) 
+        for cycle in cycles[v]
+            for c in cycle
+                for cc in cycle
+                    cc == c && break 
+                    cc ∉ acyclic_children[c] && continue
+                    ldu_factorization_d!(matrixentries[(v,cc)], matrixentries[(cc,c)], matrixentries[(cc,cc)], matrixentries[(v,c)])
+                    ldu_factorization_d!(matrixentries[(c,cc)], matrixentries[(cc,v)], matrixentries[(cc,cc)], matrixentries[(c,v)])
+                end
+                ldu_factorization_l!(matrixentries[(v,c)], matrixentries[(c,c)])
+                ldu_factorization_u!(matrixentries[(c,v)], matrixentries[(c,c)])
+                ldu_factorization_d!(matrixentries[(v,c)], matrixentries[(c,v)], matrixentries[(c,c)], matrixentries[(v,v)])
+            end
+        end
+        for c in acyclic_children[v]
             ldu_factorization_l!(matrixentries[(v,c)], matrixentries[(c,c)])
             ldu_factorization_u!(matrixentries[(c,v)], matrixentries[(c,c)])
             ldu_factorization_d!(matrixentries[(v,c)], matrixentries[(c,v)], matrixentries[(c,c)], matrixentries[(v,v)])
@@ -40,15 +55,23 @@ end
 function ldu_backsubstitution!(system)
     matrixentries = system.matrixentries
     vectorentries = system.vectorentries
+    acyclic_children = system.acyclic_children
+    cycles = system.cycles
+    parents = system.parents
 
     for v in system.dfs_list
-        for c in children(system,v) # children
+        for cycle in cycles[v]
+            for c in cycle
+                ldu_backsubstitution_l!(vectorentries[v], vectorentries[c], matrixentries[(v,c)])
+            end
+        end
+        for c in acyclic_children[v] # acyclic_children
             ldu_backsubstitution_l!(vectorentries[v], vectorentries[c], matrixentries[(v,c)])
         end
     end
     for v in system.reverse_dfs_list
         ldu_backsubstitution_d!(vectorentries[v], matrixentries[(v,v)])
-        for p in parents(system,v) # parent
+        for p in parents[v] # parent
             ldu_backsubstitution_u!(vectorentries[v], vectorentries[p], matrixentries[(v,p)])
         end
     end

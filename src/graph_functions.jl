@@ -2,22 +2,25 @@ function dfs(graph,v)
     n = nv(graph)
     visited = zeros(Bool, n)
     list = Int64[]
-    dfs2(graph,v,list,visited)
+    cycleclosures = Vector{Int64}[]
+    _dfs(graph,v,0,list,cycleclosures,visited)
 
-    return list
+    cycleclosures = cycleclosures[sortperm(sort.(cycleclosures))[1:2:length(cycleclosures)]] # removes double entries of cycle connections and keeps the first found pair
+
+    return list, cycleclosures
 end
 
-function dfs2(graph,v,list,visited)
+function _dfs(graph,v,p,list,cycleclosures,visited)
     if !visited[v]
         visited[v] = true
         for node in all_neighbors(graph,v)
-            dfs2(graph,node,list,visited)
+            if node != p && visited[node]
+                push!(cycleclosures,[v;node])
+            end
+            _dfs(graph,node,v,list,cycleclosures,visited)
         end
         push!(list,v)
     end
 
     return
 end
-
-children(system, v) = neighbors(system.dfs_graph, v)
-parents(system, v) = neighbors(system.reverse_dfs_graph, v)

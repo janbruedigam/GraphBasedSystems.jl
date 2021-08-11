@@ -4,7 +4,7 @@ using StaticArrays
 using LightGraphs
 
 
-export System
+export System,
     ldu_factorization!,
     ldu_backsubstitution!,
     ldu_solve!
