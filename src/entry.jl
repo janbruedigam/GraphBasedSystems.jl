@@ -11,5 +11,5 @@ end
 
 function randomize!(entry::Entry)
     value = entry.value
-    entry.value = rand(eltype(value), size(value))
+    entry.value = randn(eltype(value), size(value))
 end

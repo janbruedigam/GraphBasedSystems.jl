@@ -1,3 +1,5 @@
+# LDU factorization for unsymmetric systems
+
 function ldu_factorization_l!(offdiagonal, diagonal)
     offdiagonal.value = offdiagonal.value/diagonal.value
     return

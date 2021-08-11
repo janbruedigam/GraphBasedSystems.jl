@@ -1,6 +1,6 @@
-using GraphBasedSystems
 using Test
+using SafeTestsets
 
-@testset "GraphBasedSystems.jl" begin
-    # Write your tests here.
+@safetestset "LDU Tests" begin
+    include("ldu_test.jl")
 end
