@@ -45,6 +45,6 @@ for i=1:10
     B = full_matrix(system)
     b = full_vector(system)
     ldu_solve!(system)
-    @test maximum(abs.(full_vector(system)-B\b)) < 1e-5
+    @test maximum(abs.(full_vector(system)-B\b)) < 1e-3
 end
 
