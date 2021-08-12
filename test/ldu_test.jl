@@ -16,16 +16,20 @@ A = [
     0 0 0 0 0 0 0 1 0 0
 ]
 
+# Graph 1 is disconnected, 2-3-4-5 are connected, 6 is disconnected
+
 A = [
-    A Z Z Z
-    Z A Z Z
-    Z Z A Z
-    Z Z Z A
+    A Z Z Z Z Z
+    Z A Z Z Z Z
+    Z Z A Z Z Z
+    Z Z Z A Z Z
+    Z Z Z Z A Z
+    Z Z Z Z Z A
 ]
 
-A[3,11] = A[11,3] = 1
-A[6,21] = A[21,6] = 1
-A[10,31] = A[31,10] = 1
+A[13,21] = A[21,13] = 1
+A[16,31] = A[31,16] = 1
+A[20,41] = A[41,20] = 1
 
 
 system = System{Float64}(A, [rand(1:3) for i=1:size(A)[1]])

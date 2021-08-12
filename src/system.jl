@@ -29,35 +29,47 @@ struct System{N}
 
         vector_entries = [Entry{T}(dim, static = static) for dim in dims]
 
-        dfs_graph = dfs_tree(graph,1)
-        dfs_list, cycle_closures = dfs(graph,1)
-        reverse_dfs_list = reverse(dfs_list)
-        cycle_dfs_graph = copy(dfs_graph)
-        for cycle_closure in cycle_closures
-            add_edge!(cycle_dfs_graph, cycle_closure...)
-        end
-
+        graphs, subinds = split_adjacency(A)
+        dfs_list = Int64[]
         acyclic_children = [Int64[] for i=1:N]
-        parents = [Int64[] for i=1:N]
         cycles = [Vector{Int64}[] for i=1:N]
+        parents = [Int64[] for i=1:N]
 
-        for v = 1:N
-            acyclic_children[v] = neighbors(dfs_graph, v)
-            parents[v] = neighbors(reverse(dfs_graph), v)
-        end     
-        for cyclic_members in simplecycles(cycle_dfs_graph)
-            v = cyclic_members[1]
-            cyclic_children = reverse(cyclic_members[2:end])
-            push!(cycles[v], cyclic_children)
+        # Since every subgraph has 1-based indexing, we need to shift the indices by subinds
+        for (i,graph) in enumerate(graphs)
+            dfs_graph = dfs_tree(graph,1)
+            sub_dfs_list, cycle_closures = dfs(graph,1)
+            append!(dfs_list, subinds[i][sub_dfs_list])
+            # sub_acyclic_children = [Int64[] for i=1:N]
+            # sub_cycles = [Vector{Int64}[] for i=1:N]
+            # sub_parents = [Int64[] for i=1:N]
 
-            acyclic_children[v] = setdiff(acyclic_children[v],cyclic_children)
-            for c in cyclic_children
-                matrix_entries[(v,c)] = Entry{T}(dims[v], dims[c], static = static)
-                matrix_entries[(c,v)] = Entry{T}(dims[c], dims[v], static = static)
-
-                v != parents[c][1] && push!(parents[c],v)
+            cycle_dfs_graph = copy(dfs_graph)
+            for cycle_closure in cycle_closures
+                add_edge!(cycle_dfs_graph, cycle_closure...)
             end
+
+            for v in sub_dfs_list
+                acyclic_children[subinds[i][v]] = subinds[i][neighbors(dfs_graph, v)]
+                parents[subinds[i][v]] = subinds[i][neighbors(reverse(dfs_graph), v)]
+            end   
+
+            for cyclic_members in simplecycles(cycle_dfs_graph)
+                v = subinds[i][cyclic_members[1]]
+                cyclic_children = subinds[i][reverse(cyclic_members[2:end])]
+                push!(cycles[v], cyclic_children)
+
+                acyclic_children[v] = setdiff(acyclic_children[v], cyclic_children)
+                for c in cyclic_children
+                    matrix_entries[(v,c)] = Entry{T}(dims[v], dims[c], static = static)
+                    matrix_entries[(c,v)] = Entry{T}(dims[c], dims[v], static = static)
+
+                    v != parents[c][1] && push!(parents[c],v)
+                end
+            end            
         end
+
+        reverse_dfs_list = reverse(dfs_list)
 
         new{N}(matrix_entries,vector_entries,acyclic_children,cycles,parents,dfs_list,reverse_dfs_list)
     end
@@ -65,6 +77,18 @@ struct System{N}
     System(A, dims; force_static = false) = System{Float64}(A, dims; force_static = force_static)
 end
 
+
+function split_adjacency(A)
+    graphs = SimpleGraph{Int64}[]
+
+    subinds = connected_components(Graph(A))
+    for subset in subinds
+        subA = A[subset,subset]
+        push!(graphs, Graph(subA))
+    end
+
+    return graphs, subinds
+end
 
 function full_matrix(system::System{N}) where N
     dims = [length(system.vector_entries[i].value) for i=1:N]
