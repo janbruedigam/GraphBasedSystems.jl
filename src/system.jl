@@ -40,9 +40,6 @@ struct System{N}
             dfs_graph = dfs_tree(graph,1)
             sub_dfs_list, cycle_closures = dfs(graph,1)
             append!(dfs_list, subinds[i][sub_dfs_list])
-            # sub_acyclic_children = [Int64[] for i=1:N]
-            # sub_cycles = [Vector{Int64}[] for i=1:N]
-            # sub_parents = [Int64[] for i=1:N]
 
             cycle_dfs_graph = copy(dfs_graph)
             for cycle_closure in cycle_closures
