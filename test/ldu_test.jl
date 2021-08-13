@@ -32,7 +32,9 @@ A[16,31] = A[31,16] = 1
 A[20,41] = A[41,20] = 1
 
 
-system = System{Float64}(A, [rand(1:3) for i=1:size(A)[1]])
+ids = rand(1:1000,1000)
+ids = unique(ids)
+system = System{Float64}(A, [rand(1:3) for i=1:size(A)[1]]; ids = collect(1:size(A)[1]))
 
 for i=1:10
     for entry in collect(values(system.matrix_entries))

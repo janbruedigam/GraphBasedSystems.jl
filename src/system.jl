@@ -6,6 +6,8 @@ struct System{N}
     parents::Dict{Int64,Vector{Int64}}          # Contains direct and cycle-opening parent (2 elemtents at most)
     dfs_list::SVector{N,Int64}
     reverse_dfs_list::SVector{N,Int64}
+    graph::SimpleGraph{Int64}
+    dfs_graph::SimpleDiGraph{Int64}
 
     function System{T}(A, dims; ids = collect(1:length(dims)), force_static = false) where T
         N = length(dims)
@@ -40,6 +42,7 @@ struct System{N}
         cycles = Dict([ids[i] => Vector{Int64}[] for i=1:N]...)
         parents = Dict{Int64,Vector{Int64}}()
         dims = Dict([ids[i] => dims[i] for i=1:N]...)
+        edgelist = LightGraphs.SimpleEdge{Int64}[]
 
         for (i,graph) in enumerate(graphs)
             graph = reindex_graph(graph, ids)
@@ -49,9 +52,12 @@ struct System{N}
             append!(dfs_list, sub_dfs_list)
 
             cycle_dfs_graph = copy(dfs_graph)
+            cycle_dfs_graph_reverse = copy(dfs_graph)
             for cycle_closure in cycle_closures
                 add_edge!(cycle_dfs_graph, cycle_closure...)
+                add_edge!(cycle_dfs_graph_reverse, reverse(cycle_closure)...)
             end
+            append!(edgelist, collect(edges(cycle_dfs_graph_reverse)))
 
             for v in sub_dfs_list
                 acyclic_children[v] = neighbors(dfs_graph, v)
@@ -75,49 +81,18 @@ struct System{N}
 
         reverse_dfs_list = reverse(dfs_list)
 
-        new{N}(matrix_entries, vector_entries, acyclic_children, cycles, parents, dfs_list, reverse_dfs_list)
+        full_dfs_graph = SimpleDiGraph(edgelist)
+
+        new{N}(matrix_entries, vector_entries, acyclic_children, cycles, parents, dfs_list, reverse_dfs_list, full_graph, full_dfs_graph)
     end
 
     System(A, dims; force_static = false) = System{Float64}(A, dims; force_static = force_static)
 end
 
 
-function split_adjacency(A)
-    graphs = SimpleGraph{Int64}[]
-
-    subinds = connected_components(Graph(A))
-    for subset in subinds
-        subA = zeros(Int64,size(A)...)
-        subA[subset,subset] = A[subset,subset]
-        push!(graphs, Graph(subA))
-    end
-
-    roots = [subinds[i][1] for i=1:length(subinds)]
-
-    return graphs, roots
-end
-
-function reindex_graph(g, ids)
-    originaledges = collect(edges(g))
-    newedges = LightGraphs.SimpleEdge{Int64}[]
-    for edge in originaledges
-        push!(newedges, LightGraphs.SimpleEdge(ids[edge.src], ids[edge.dst]))
-    end
-
-    return SimpleGraphFromIterator(newedges)
-end
-
-function cycle_parent_children(cyclic_members, parents)
-    parent = -1
-    for member in cyclic_members
-        !isempty(parents[member]) && parents[member][1] ∈ cyclic_members && continue
-        parent = member
-        break
-    end
-
-    return parent, setdiff(cyclic_members, parent)
-end
-
+@inline children(system, v) = outneighbors(system.dfs_graph, v)
+@inline connections(system, v) = neighbors(system.graph, v)
+@inline parents(system, v) = inneighbors(system.dfs_graph, v)
 
 function full_matrix(system::System{N}) where N
     ids = convert(Vector,sort(system.dfs_list)) # SA for some reason gives wrong 'rest' in Iterators
