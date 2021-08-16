@@ -1,5 +1,6 @@
 module GraphBasedSystems
 
+using SparseArrays
 using StaticArrays
 using LightGraphs
 
@@ -14,15 +15,15 @@ export System,
     ldu_solve!
 
 
-include("custom_static.jl")
+include(joinpath("util", "custom_static.jl"))
 
-include("entry.jl")
-include("system.jl")
-include("setup_functions.jl")
+include(joinpath("system", "entry.jl"))
+include(joinpath("system", "system.jl"))
+include(joinpath("system", "setup_functions.jl"))
 
-# include("lu.jl")
-# include("llt.jl")
-# include("ldlt.jl")
-include("ldu.jl")
+include(joinpath("solvers", "lu.jl"))
+include(joinpath("solvers", "llt.jl"))
+include(joinpath("solvers", "ldlt.jl"))
+include(joinpath("solvers", "ldu.jl"))
 
 end

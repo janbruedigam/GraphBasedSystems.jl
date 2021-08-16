@@ -34,13 +34,13 @@ A[20,41] = A[41,20] = 1
 
 ids = rand(1:1000,1000)
 ids = unique(ids)
-system = System{Float64}(A, [rand(0:3) for i=1:size(A)[1]]; ids = collect(1:size(A)[1]))
+system = System{Float64}(A, rand(0:3,size(A)[1]))
 
 for i=1:10
-    for entry in collect(values(system.matrix_entries))
+    for entry in system.matrix_entries.nzval
         GBS.randomize!(entry)
     end
-    for entry in collect(values(system.vector_entries))
+    for entry in system.vector_entries
         GBS.randomize!(entry)
     end
 
