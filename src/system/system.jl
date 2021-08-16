@@ -1,52 +1,45 @@
 struct System{N}
-    matrix_entries::Dict{Tuple{Int64, Int64}, Entry}
-    vector_entries::Dict{Int64, Entry}
-    acyclic_children::Dict{Int64,Vector{Int64}} # Contains direct children that are not part of a cycle
-    cycles::Dict{Int64,Vector{Vector{Int64}}}   # Contains direct and indirect children that are part of a cycle (sorted in cycles)
-    parents::Dict{Int64,Vector{Int64}}          # Contains direct and cycle-opening parent (2 elemtents at most)
+    matrix_entries::SparseMatrixCSC{GraphBasedSystems.Entry, Int64}
+    vector_entries::Vector{Entry}
+    diagonal_inverses::Vector{Entry}
+    acyclic_children::Vector{Vector{Int64}} # Contains direct children that are not part of a cycle
+    cycles::Vector{Vector{Vector{Int64}}}   # Contains direct and indirect children that are part of a cycle (sorted in cycles)
+    parents::Vector{Vector{Int64}}          # Contains direct and cycle-opening parent (2 elemtents at most)
     dfs_list::SVector{N,Int64}
-    reverse_dfs_list::SVector{N,Int64}
     graph::SimpleGraph{Int64}
     dfs_graph::SimpleDiGraph{Int64}
 
-    function System{T}(A, dims; ids = collect(1:length(dims)), force_static = false) where T
+    function System{T}(A, dims; force_static = false) where T
         N = length(dims)
         static = force_static || all(dims.<=10)
 
-        full_graph = reindex_graph(Graph(A), ids)
+        full_graph = Graph(A)
 
-        matrix_entries = Dict{Tuple{Int64, Int64}, Entry}()
+        matrix_entries = spzeros(Entry,N,N)
 
-        for (_i,dimi) in enumerate(dims)
-            i = ids[_i]
-            for (_j,dimj) in enumerate(dims)
-                j = ids[_j]
+        for (i,dimi) in enumerate(dims)
+            for (j,dimj) in enumerate(dims)
                 if i == j
-                    matrix_entries[(i,j)] = Entry{T}(dimi, dimj, static = static)
+                    matrix_entries[i,j] = Entry{T}(dimi, dimj, static = static)
                 elseif j ∈ all_neighbors(full_graph,i)
-                    matrix_entries[(i,j)] = Entry{T}(dimi, dimj, static = static)
-                    matrix_entries[(j,i)] = Entry{T}(dimj, dimi, static = static)
+                    matrix_entries[i,j] = Entry{T}(dimi, dimj, static = static)
+                    matrix_entries[j,i] = Entry{T}(dimj, dimi, static = static)
                 end
             end
         end
 
-        vector_entries = Dict{Int64, Entry}()
-
-        for (i,dim) in enumerate(dims)
-            vector_entries[ids[i]] = Entry{T}(dim, static = static)
-        end
+        vector_entries = [Entry{T}(dim, static = static) for dim in dims]
+        diagonal_inverses = [Entry{T}(dim, dim, static = static) for dim in dims]
 
         graphs, roots = split_adjacency(A)
         dfs_list = Int64[]
-        acyclic_children = Dict{Int64,Vector{Int64}}()
-        cycles = Dict([ids[i] => Vector{Int64}[] for i=1:N]...)
-        parents = Dict{Int64,Vector{Int64}}()
-        dims = Dict([ids[i] => dims[i] for i=1:N]...)
+        acyclic_children = [Int64[] for i=1:N]
+        cycles = [Vector{Int64}[] for i=1:N]
+        parents = [Int64[] for i=1:N]
         edgelist = LightGraphs.SimpleEdge{Int64}[]
 
         for (i,graph) in enumerate(graphs)
-            graph = reindex_graph(graph, ids)
-            root = ids[roots[i]]
+            root = roots[i]
             dfs_graph = dfs_tree(graph, root)
             sub_dfs_list, cycle_closures = dfs(graph, root)
             append!(dfs_list, sub_dfs_list)
@@ -71,19 +64,17 @@ struct System{N}
 
                 acyclic_children[v] = setdiff(acyclic_children[v], cyclic_children)
                 for c in cyclic_children
-                    matrix_entries[(v,c)] = Entry{T}(dims[v], dims[c], static = static)
-                    matrix_entries[(c,v)] = Entry{T}(dims[c], dims[v], static = static)
+                    matrix_entries[v,c] = Entry{T}(dims[v], dims[c], static = static)
+                    matrix_entries[c,v] = Entry{T}(dims[c], dims[v], static = static)
 
                     v != parents[c][1] && push!(parents[c],v)
                 end
             end            
         end
 
-        reverse_dfs_list = reverse(dfs_list)
-
         full_dfs_graph = SimpleDiGraph(edgelist)
 
-        new{N}(matrix_entries, vector_entries, acyclic_children, cycles, parents, dfs_list, reverse_dfs_list, full_graph, full_dfs_graph)
+        new{N}(matrix_entries, vector_entries, diagonal_inverses, acyclic_children, cycles, parents, dfs_list, full_graph, full_dfs_graph)
     end
 
     System(A, dims; force_static = false) = System{Float64}(A, dims; force_static = force_static)
@@ -94,36 +85,22 @@ end
 @inline connections(system, v) = neighbors(system.graph, v)
 @inline parents(system, v) = inneighbors(system.dfs_graph, v)
 
+# There probably exists a smarter way of getting the dense matrix from the spares one 
 function full_matrix(system::System{N}) where N
-    ids = convert(Vector,sort(system.dfs_list)) # SA for some reason gives wrong 'rest' in Iterators
-    dims = Dict([id => length(system.vector_entries[id].value) for id in ids]...)
+    dims = [length(system.vector_entries[i].value) for i=1:N]
 
-    range = Dict(ids[1] => 1:dims[ids[1]])
-    
-    for (i,id) in enumerate(collect(Iterators.rest(ids, 2)))
-        lastind = last(range[ids[i]])
-        range[id] = lastind+1:lastind+dims[id]
+    range = [1:dims[1]]
+
+    for (i,dim) in enumerate(collect(Iterators.rest(dims, 2)))
+        push!(range,sum(dims[1:i])+1:sum(dims[1:i])+dim)
     end
-    A = zeros(sum(values(dims)),sum(values(dims)))
-    for key in keys(system.matrix_entries)
-        A[range[key[1]],range[key[2]]] = system.matrix_entries[key].value
+    A = zeros(sum(dims),sum(dims))
+
+    for (i,row) in enumerate(system.matrix_entries.rowval)
+        col = findfirst(x->i<x,system.matrix_entries.colptr)-1
+            A[range[row],range[col]] = system.matrix_entries[row,col].value
     end
     return A
 end
 
-function full_vector(system::System{N}) where N
-    ids = convert(Vector,sort(system.dfs_list)) # SA for some reason gives wrong 'rest' in Iterators
-    dims = Dict([id => length(system.vector_entries[id].value) for id in ids]...)
-
-    range = Dict(ids[1] => 1:dims[ids[1]])
-    
-    for (i,id) in enumerate(collect(Iterators.rest(ids, 2)))
-        lastind = last(range[ids[i]])
-        range[id] = lastind+1:lastind+dims[id]
-    end
-    b = zeros(sum(values(dims)))
-    for key in keys(system.vector_entries)
-        b[range[key[1]]] = system.vector_entries[key].value
-    end
-    return b
-end
+full_vector(system) = vcat(getfield.(system.vector_entries,:value)...)

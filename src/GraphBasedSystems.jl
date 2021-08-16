@@ -1,5 +1,6 @@
 module GraphBasedSystems
 
+using SparseArrays
 using StaticArrays
 using LightGraphs
 
