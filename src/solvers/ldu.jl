@@ -22,19 +22,17 @@ function ldu_factorization!(system)
     matrix_entries = system.matrix_entries
     diagonal_inverses = system.diagonal_inverses
     acyclic_children = system.acyclic_children
-    cycles = system.cycles
+    cyclic_children = system.cyclic_children
 
     for v in system.dfs_list
-        for cyclic_children in cycles[v]
-            for c in cyclic_children
-                for cc in cyclic_children
-                    cc == c && break 
-                    cc ∉ acyclic_children[c] && continue
-                    ldu_factorization_cyclic!(matrix_entries[v,c], matrix_entries[v,cc], matrix_entries[cc,cc], matrix_entries[cc,c])
-                    ldu_factorization_cyclic!(matrix_entries[c,v], matrix_entries[c,cc], matrix_entries[cc,cc], matrix_entries[cc,v])
-                end
-                ldu_factorization_acyclic!(matrix_entries[v,v], matrix_entries[v,c], matrix_entries[c,c], matrix_entries[c,v], diagonal_inverses[c])
+        for c in cyclic_children[v]
+            for cc in cyclic_children[v]
+                cc == c && break 
+                (cc ∉ children(system,c) && cc ∉ cyclic_children[c]) && continue
+                ldu_factorization_cyclic!(matrix_entries[v,c], matrix_entries[v,cc], matrix_entries[cc,cc], matrix_entries[cc,c])
+                ldu_factorization_cyclic!(matrix_entries[c,v], matrix_entries[c,cc], matrix_entries[cc,cc], matrix_entries[cc,v])
             end
+            ldu_factorization_acyclic!(matrix_entries[v,v], matrix_entries[v,c], matrix_entries[c,c], matrix_entries[c,v], diagonal_inverses[c])
         end
         for c in acyclic_children[v]
             ldu_factorization_acyclic!(matrix_entries[v,v], matrix_entries[v,c], matrix_entries[c,c], matrix_entries[c,v], diagonal_inverses[c])
@@ -66,15 +64,13 @@ function ldu_backsubstitution!(system)
     diagonal_inverses = system.diagonal_inverses
     vector_entries = system.vector_entries
     acyclic_children = system.acyclic_children
-    cycles = system.cycles
+    cyclic_children = system.cyclic_children
     parents = system.parents
     dfs_list = system.dfs_list
 
     for v in dfs_list
-        for cyclic_children in cycles[v]
-            for c in cyclic_children
-                ldu_backsubstitution_l!(vector_entries[v], matrix_entries[v,c], vector_entries[c])
-            end
+        for c in cyclic_children[v]
+            ldu_backsubstitution_l!(vector_entries[v], matrix_entries[v,c], vector_entries[c])
         end
         for c in acyclic_children[v]
             ldu_backsubstitution_l!(vector_entries[v], matrix_entries[v,c], vector_entries[c])
