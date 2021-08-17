@@ -29,7 +29,7 @@ function ldu_factorization!(system)
             for c in cyclic_children
                 for cc in cyclic_children
                     cc == c && break 
-                    cc ∉ acyclic_children[c] && continue
+                    cc ∉ children(system,c) && continue
                     ldu_factorization_cyclic!(matrix_entries[v,c], matrix_entries[v,cc], matrix_entries[cc,cc], matrix_entries[cc,c])
                     ldu_factorization_cyclic!(matrix_entries[c,v], matrix_entries[c,cc], matrix_entries[cc,cc], matrix_entries[cc,v])
                 end
