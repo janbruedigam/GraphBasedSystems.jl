@@ -40,16 +40,6 @@ function split_adjacency(A)
     return graphs, roots
 end
 
-function reindex_graph(g, ids)
-    originaledges = collect(edges(g))
-    newedges = LightGraphs.SimpleEdge{Int64}[]
-    for edge in originaledges
-        push!(newedges, LightGraphs.SimpleEdge(ids[edge.src], ids[edge.dst]))
-    end
-
-    return SimpleGraphFromIterator(newedges)
-end
-
 function cycle_parent_children(cyclic_members, parents)
     parent = -1
     for member in cyclic_members
@@ -59,4 +49,18 @@ function cycle_parent_children(cyclic_members, parents)
     end
 
     return parent, setdiff(cyclic_members, parent)
+end
+
+function lump_cycles!(cycles, cyclic_children)
+    inds = Int64[]
+    for (i,cycle) in enumerate(cycles)
+        if cyclic_children ⊆ cycle
+            return
+        elseif cyclic_children ⊇ cycle
+            append!(inds,i)
+        end
+    end
+    push!(cycles, cyclic_children)
+    deleteat!(cycles, inds)
+    return
 end

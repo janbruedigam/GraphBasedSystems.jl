@@ -3,8 +3,8 @@ struct System{N}
     vector_entries::Vector{Entry}
     diagonal_inverses::Vector{Entry}
     acyclic_children::Vector{Vector{Int64}} # Contains direct children that are not part of a cycle
-    cycles::Vector{Vector{Vector{Int64}}}   # Contains direct and indirect children that are part of a cycle (sorted in cycles)
-    parents::Vector{Vector{Int64}}          # Contains direct and cycle-opening parent (2 elemtents at most)
+    cyclic_children::Vector{Vector{Int64}}  # Contains direct and indirect children that are part of a cycle
+    parents::Vector{Vector{Int64}}          # Contains direct and cycle-opening parents
     dfs_list::SVector{N,Int64}
     graph::SimpleGraph{Int64}
     dfs_graph::SimpleDiGraph{Int64}
@@ -60,21 +60,22 @@ struct System{N}
             for cyclic_members in simplecycles(cycle_dfs_graph)
                 v, cyclic_children = cycle_parent_children(cyclic_members, parents)
                 cyclic_children = reverse(cyclic_children)
-                push!(cycles[v], cyclic_children)
+                lump_cycles!(cycles[v], cyclic_children)
 
                 acyclic_children[v] = setdiff(acyclic_children[v], cyclic_children)
                 for c in cyclic_children
                     matrix_entries[v,c] = Entry{T}(dims[v], dims[c], static = static)
                     matrix_entries[c,v] = Entry{T}(dims[c], dims[v], static = static)
 
-                    v != parents[c][1] && push!(parents[c],v)
+                    v ∉ parents[c] && push!(parents[c],v)
                 end
             end            
         end
 
         full_dfs_graph = SimpleDiGraph(edgelist)
+        cyclic_children = [unique(vcat(cycles[i]...)) for i=1:N]
 
-        new{N}(matrix_entries, vector_entries, diagonal_inverses, acyclic_children, cycles, parents, dfs_list, full_graph, full_dfs_graph)
+        new{N}(matrix_entries, vector_entries, diagonal_inverses, acyclic_children, cyclic_children, parents, dfs_list, full_graph, full_dfs_graph)
     end
 
     System(A, dims; force_static = false) = System{Float64}(A, dims; force_static = force_static)
