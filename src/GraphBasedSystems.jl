@@ -2,7 +2,7 @@ module GraphBasedSystems
 
 using SparseArrays
 using StaticArrays
-using LightGraphs
+using Graphs
 
 
 export System,
