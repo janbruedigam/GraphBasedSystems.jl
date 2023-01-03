@@ -12,7 +12,8 @@ export System,
     connections,
     parents,
 
-    ldu_solve!
+    ldu_solve!,
+    lu_solve!
 
 
 include(joinpath("util", "custom_static.jl"))
