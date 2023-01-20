@@ -40,15 +40,15 @@ D = [
     1 0 0 0 0 1
     0 1 0 0 1 0]
 
-ZAA = zeros(Int64,10,10)
-ZAB = zeros(Int64,10,9)
-ZAC = zeros(Int64,10,6)
-ZAD = zeros(Int64,10,6)
-ZBB = zeros(Int64,9,9)
-ZBC = zeros(Int64,9,6)
-ZBD = zeros(Int64,9,6)
-ZCC = zeros(Int64,6,6)
-ZCD = zeros(Int64,6,6)
+ZAA = zeros(Int64, 10, 10)
+ZAB = zeros(Int64, 10, 9)
+ZAC = zeros(Int64, 10, 6)
+ZAD = zeros(Int64, 10, 6)
+ZBB = zeros(Int64, 9, 9)
+ZBC = zeros(Int64, 9, 6)
+ZBD = zeros(Int64, 9, 6)
+ZCC = zeros(Int64, 6, 6)
+ZCD = zeros(Int64, 6, 6)
 
 ZBA = ZAB'
 ZCA = ZAC'

@@ -1,23 +1,23 @@
-function dfs(graph, v)
+function depth_first_search(graph, v)
     n = nv(graph)
     visited = zeros(Bool, n)
     list = Int64[]
-    cycleclosures = Vector{Int64}[]
-    _dfs(graph,v,0,list,cycleclosures,visited)
+    cycle_closures = Vector{Int64}[]
+    _depth_first_search(graph, v, 0, list, cycle_closures, visited)
 
-    cycleclosures = cycleclosures[sortperm(sort.(cycleclosures))[1:2:length(cycleclosures)]] # removes double entries of cycle connections and keeps the first found pair
+    cycle_closures = cycle_closures[sortperm(sort.(cycle_closures))[1:2:length(cycle_closures)]] # removes double entries of cycle connections and keeps the first found pair
 
-    return list, cycleclosures
+    return list, cycle_closures
 end
 
-function _dfs(graph, v, p, list, cycleclosures, visited)
+function _depth_first_search(graph, v, p, list, cycle_closures, visited)
     if !visited[v]
         visited[v] = true
-        for node in all_neighbors(graph,v)
+        for node in all_neighbors(graph, v)
             if node != p && visited[node]
-                push!(cycleclosures,[v;node])
+                push!(cycle_closures, [v;node])
             end
-            _dfs(graph,node,v,list,cycleclosures,visited)
+            _depth_first_search(graph, node, v, list, cycle_closures, visited)
         end
         push!(list,v)
     end
@@ -30,12 +30,12 @@ function split_adjacency(A)
 
     subinds = connected_components(Graph(A))
     for subset in subinds
-        subA = zeros(Int64,size(A)...)
+        subA = zeros(Int64, size(A)...)
         subA[subset,subset] = A[subset,subset]
         push!(graphs, Graph(subA))
     end
 
-    roots = [subinds[i][1] for i=1:length(subinds)]
+    roots = [subinds[i][1] for i=1:lastindex(subinds)]
 
     return graphs, roots
 end
@@ -57,7 +57,7 @@ function lump_cycles!(cycles, cyclic_children)
         if cyclic_children ⊆ cycle
             return
         elseif cyclic_children ⊇ cycle
-            append!(inds,i)
+            append!(inds, i)
         end
     end
     push!(cycles, cyclic_children)

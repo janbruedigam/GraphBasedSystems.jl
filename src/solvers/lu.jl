@@ -30,7 +30,7 @@ function lu_factorization!(system::System)
         for c in cyclic_children[v]
             for cc in cyclic_children[v]
                 cc == c && break 
-                (cc ∉ children(system,c) && cc ∉ cyclic_children[c]) && continue
+                (cc ∉ acyclic_children[c] && cc ∉ cyclic_children[c]) && continue
                 lu_factorization_cyclic!(matrix_entries[v,c], matrix_entries[v,cc], matrix_entries[cc,c])
                 lu_factorization_cyclic!(matrix_entries[c,v], matrix_entries[c,cc], matrix_entries[cc,v])
             end

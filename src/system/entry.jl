@@ -3,7 +3,7 @@ mutable struct Entry{ET}
     isinverted::Bool
 
     function Entry{T}(dims...; static = true) where T
-        static ? value = szeros(T,dims...) : value = zeros(T,dims...)
+        static ? value = szeros(T, dims...) : value = zeros(T, dims...)
         new{typeof(value)}(value, false)
     end
 
@@ -23,6 +23,9 @@ end
 function Base.zero(::Type{Entry{ET}}) where ET
     dims = [ET.parameters[1].parameters...]
     return Entry{ET.parameters[2]}(dims...)
+end
+function Base.zero(::Type{Entry})
+    return 0
 end
 
 function randomize!(entry::Entry, rand_function = randn)

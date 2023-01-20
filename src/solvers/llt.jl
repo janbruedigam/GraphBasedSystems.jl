@@ -31,7 +31,7 @@ function llt_factorization!(system::System)
         for c in cyclic_children[v]
             for cc in cyclic_children[v]
                 cc == c && break 
-                (cc ∉ children(system,c) && cc ∉ cyclic_children[c]) && continue 
+                (cc ∉ acyclic_children[c] && cc ∉ cyclic_children[c]) && continue
                 llt_factorization_cyclic!(matrix_entries[v,c], matrix_entries[v,cc], matrix_entries[c,cc])
             end
             llt_factorization_acyclic!(matrix_entries[v,v], matrix_entries[v,c], matrix_entries[c,c], diagonal_inverses[c])

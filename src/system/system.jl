@@ -2,27 +2,27 @@ abstract type Symmetric end
 abstract type Unsymmetric end
 
 struct System{N,T}
-    matrix_entries::SparseMatrixCSC{GraphBasedSystems.Entry, Int64}
-    vector_entries::Vector{Entry}
-    diagonal_inverses::Vector{Entry}
-    acyclic_children::Vector{Vector{Int64}} # Contains direct children that are not part of a cycle
-    cyclic_children::Vector{Vector{Int64}}  # Contains direct and indirect children that are part of a cycle
-    parents::Vector{Vector{Int64}}          # Contains direct and cycle-opening parents
-    dfs_list::SVector{N,Int64}
-    graph::SimpleGraph{Int64}
-    dfs_graph::SimpleDiGraph{Int64}
+    matrix_entries::SparseMatrixCSC{GraphBasedSystems.Entry, Int64} # matrix entries of the system
+    vector_entries::Vector{Entry}                                   # vector entries of the system
+    diagonal_inverses::Vector{Entry}                                # stores inverses of diagonal matrix entries once calculated
+    acyclic_children::Vector{Vector{Int64}} # contains direct children that are not part of a cycle
+    cyclic_children::Vector{Vector{Int64}}  # contains direct and indirect children that are part of a cycle (in dfs_list order)
+    parents::Vector{Vector{Int64}}          # contains direct and cycle-opening parents
+    dfs_list::SVector{N,Int64}      # depth-first search list of nodes [last-found node, ..., first-found node]
+    graph::SimpleGraph{Int64}       # the graph built from the adjacency matrix
+    dfs_graph::SimpleDiGraph{Int64} # the directed graph built from the depth-first search
 
     function System{T}(A, dims; force_static = false, symmetric = false) where T
         N = length(dims)
         symmetric ? S = Symmetric : S = Unsymmetric
-        static = force_static || all(dims.<=10)
+        static = force_static || all(dims .<= 10) # StaticArrays becomes slow for matrices larger than 10x10
 
         full_graph = Graph(A)
 
         matrix_entries = spzeros(Entry,N,N)
 
         for (i,dimi) in enumerate(dims)
-                matrix_entries[i,i] = Entry{T}(dimi, dimi, static = static)
+            matrix_entries[i,i] = Entry{T}(dimi, dimi, static = static)
         end
 
         vector_entries = [Entry{T}(dim, static = static) for dim in dims]
@@ -38,7 +38,7 @@ struct System{N,T}
         for (i,graph) in enumerate(graphs)
             root = roots[i]
             dfs_graph = dfs_tree(graph, root)
-            sub_dfs_list, cycle_closures = dfs(graph, root)
+            sub_dfs_list, cycle_closures = depth_first_search(graph, root)
             append!(dfs_list, sub_dfs_list)
 
             cycle_dfs_graph = copy(dfs_graph)
@@ -77,7 +77,7 @@ struct System{N,T}
 
         full_dfs_graph = SimpleDiGraph(edgelist)
         cyclic_children = [unique(vcat(cycles[i]...)) for i=1:N]
-        cyclic_children = [intersect(dfs_list,cyclic_children[i]) for i=1:N]
+        cyclic_children = [intersect(dfs_list, cyclic_children[i]) for i=1:N]
 
         new{N,S}(matrix_entries, vector_entries, diagonal_inverses, acyclic_children, cyclic_children, parents, dfs_list, full_graph, full_dfs_graph)
     end
@@ -88,7 +88,7 @@ end
 function Base.show(io::IO, mime::MIME{Symbol("text/plain")}, system::System{N,S}) where {N,S}
     if S <: Symmetric
         print(io, "Symmetric")
-    elseif S <: SparsitySymmetric
+    elseif S <: Unsymmetric
         print(io, "Unsymmetric ")
     end
     println(io, "System with "*string(N)*" nodes.")
@@ -96,9 +96,9 @@ function Base.show(io::IO, mime::MIME{Symbol("text/plain")}, system::System{N,S}
 end
 
 
-@inline children(system::System, v) = outneighbors(system.dfs_graph, v)
-@inline connections(system::System, v) = neighbors(system.graph, v)
-@inline parents(system::System, v) = inneighbors(system.dfs_graph, v)
+@inline children(system::System, v) = outneighbors(system.dfs_graph, v) # all direct children of v
+@inline connections(system::System, v) = neighbors(system.graph, v)     # all connected nodes of v
+@inline parents(system::System, v) = inneighbors(system.dfs_graph, v)   # same elements as system.parents[v], but potentially different order
 
 dimensions(system::System{N}) where N = [size(system.vector_entries[i].value)[1] for i=1:N]
 function ranges(system::System{N}) where N
@@ -115,10 +115,10 @@ end
 function full_matrix(system::System{N}) where N
     dims = dimensions(system)
     range_dict = ranges(system)
-    A = zeros(sum(dims),sum(dims))
+    A = zeros(sum(dims), sum(dims))
 
     for (i,row) in enumerate(system.matrix_entries.rowval)
-        col = findfirst(x->i<x,system.matrix_entries.colptr)-1
+        col = findfirst(x -> i<x, system.matrix_entries.colptr)-1
         A[range_dict[row],range_dict[col]] = system.matrix_entries[row,col].value
     end
     return A
@@ -130,7 +130,7 @@ function full_matrix(system::System{N,<:Symmetric}) where N
     A = zeros(sum(dims),sum(dims))
 
     for (i,row) in enumerate(system.matrix_entries.rowval)
-        col = findfirst(x->i<x,system.matrix_entries.colptr)-1
+        col = findfirst(x -> i<x, system.matrix_entries.colptr)-1
         A[range_dict[row],range_dict[col]] = system.matrix_entries[row,col].value
         if col != row
             A[range_dict[col],range_dict[row]] = system.matrix_entries[row,col].value'
