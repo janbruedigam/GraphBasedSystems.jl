@@ -1,6 +1,5 @@
-abstract type Symmetric end                     # symmetric = true
-abstract type BlockSymmetric <: Symmetric end   # symmetric = true
-abstract type SparsitySymmetric end             # symmetric = false, Any matrix is sparsity symmetric since zero entries can be assumed nonzero
+abstract type Symmetric end
+abstract type Unsymmetric end
 
 struct System{N,T}
     matrix_entries::SparseMatrixCSC{GraphBasedSystems.Entry, Int64}
@@ -15,11 +14,7 @@ struct System{N,T}
 
     function System{T}(A, dims; force_static = false, symmetric = false) where T
         N = length(dims)
-        if symmetric
-            all(dims .== 1) ? S = Symmetric : S = BlockSymmetric
-        else
-            S = SparsitySymmetric
-        end
+        symmetric ? S = Symmetric : S = Unsymmetric
         static = force_static || all(dims.<=10)
 
         full_graph = Graph(A)
@@ -91,61 +86,87 @@ struct System{N,T}
 end
 
 function Base.show(io::IO, mime::MIME{Symbol("text/plain")}, system::System{N,S}) where {N,S}
-    if S <: BlockSymmetric
-        print(io, "BlockSymmetric ")
-    elseif S <: Symmetric
-        print(io, "Symmetric ")
+    if S <: Symmetric
+        print(io, "Symmetric")
     elseif S <: SparsitySymmetric
-        print(io, "SparsitySymmetric ")
+        print(io, "Unsymmetric ")
     end
     println(io, "System with "*string(N)*" nodes.")
     SparseArrays._show_with_braille_patterns(io, system.matrix_entries)
 end
 
 
-@inline children(system, v) = outneighbors(system.dfs_graph, v)
-@inline connections(system, v) = neighbors(system.graph, v)
-@inline parents(system, v) = inneighbors(system.dfs_graph, v)
+@inline children(system::System, v) = outneighbors(system.dfs_graph, v)
+@inline connections(system::System, v) = neighbors(system.graph, v)
+@inline parents(system::System, v) = inneighbors(system.dfs_graph, v)
+
+dimensions(system::System{N}) where N = [size(system.vector_entries[i].value)[1] for i=1:N]
+function ranges(system::System{N}) where N
+    dims = dimensions(system)
+    range_dict = Dict(1=>1:dims[1])
+    for i=2:N
+        range_dict[i] = last(range_dict[i-1])+1:sum(dims[1:i])
+    end
+
+    return range_dict
+end
 
 # There probably exists a smarter way of getting the dense matrix from the spares one 
 function full_matrix(system::System{N}) where N
-    dims = [length(system.vector_entries[i].value) for i=1:N]
-
-    range = [1:dims[1]]
-
-    for (i,dim) in enumerate(collect(Iterators.rest(dims, 2)))
-        push!(range,sum(dims[1:i])+1:sum(dims[1:i])+dim)
-    end
+    dims = dimensions(system)
+    range_dict = ranges(system)
     A = zeros(sum(dims),sum(dims))
 
     for (i,row) in enumerate(system.matrix_entries.rowval)
         col = findfirst(x->i<x,system.matrix_entries.colptr)-1
-            A[range[row],range[col]] = system.matrix_entries[row,col].value
+        A[range_dict[row],range_dict[col]] = system.matrix_entries[row,col].value
     end
     return A
 end
 
-# function full_matrix(system::System{N,<:Symmetric}) where N
-#     dims = [length(system.vector_entries[i].value) for i=1:N]
+function full_matrix(system::System{N,<:Symmetric}) where N
+    dims = dimensions(system)
+    range_dict = ranges(system)
+    A = zeros(sum(dims),sum(dims))
 
-#     range = [1:dims[1]]
+    for (i,row) in enumerate(system.matrix_entries.rowval)
+        col = findfirst(x->i<x,system.matrix_entries.colptr)-1
+        A[range_dict[row],range_dict[col]] = system.matrix_entries[row,col].value
+        if col != row
+            A[range_dict[col],range_dict[row]] = system.matrix_entries[row,col].value'
+        end
+    end
+    return A
+end
 
-#     for (i,dim) in enumerate(collect(Iterators.rest(dims, 2)))
-#         push!(range,sum(dims[1:i])+1:sum(dims[1:i])+dim)
-#     end
-#     A = zeros(sum(dims),sum(dims))
+full_vector(system::System) = vcat(getfield.(system.vector_entries,:value)...)
 
-#     for (i,row) in enumerate(system.matrix_entries.rowval)
-#         col = findfirst(x->i<x,system.matrix_entries.colptr)-1
-#         A[range[row],range[col]] = system.matrix_entries[row,col].value
-#         if col != row
-#             A[range[col],range[row]] = system.matrix_entries[row,col].value'
-#         end
-#     end
-#     return A
-# end
+function randomize!(system::System, rand_function = randn)
+    for entry in system.matrix_entries.nzval
+        randomize!(entry, rand_function)
+    end
+    for entry in system.vector_entries
+        randomize!(entry, rand_function)
+    end
+end
 
-full_vector(system) = vcat(getfield.(system.vector_entries,:value)...)
+function randomize!(system::System{N,<:Symmetric}, rand_function = randn) where N
+    matrix_entries = system.matrix_entries
 
-reordered_matrix(system) = full_matrix(system)[system.dfs_list,system.dfs_list]
-reordered_vector(system) = full_vector(system)[system.dfs_list]
+    for entry in matrix_entries.nzval
+        randomize!(entry, rand_function)
+    end
+    for i=1:N
+        matrix_entries[i,i].value += matrix_entries[i,i].value'
+    end
+
+    for entry in system.vector_entries
+        randomize!(entry, rand_function)
+    end
+end
+
+function reset_inverse_diagonals!(system::System)
+    for entry in system.diagonal_inverses
+        entry.isinverted = false
+    end
+end

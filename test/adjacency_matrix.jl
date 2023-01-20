@@ -1,4 +1,3 @@
-using GraphBasedSystems
 A = [
     0 1 0 1 1 0 1 0 1 0
     1 0 1 0 0 0 0 0 0 0
@@ -74,20 +73,3 @@ A = [
 A[13,21] = A[21,13] = 1
 A[16,30] = A[30,16] = 1
 A[20,36] = A[36,20] = 1
-
-
-system = System{Float64}(A, rand(0:3,size(A)[1]))
-
-function init!(system)
-    for entry in system.matrix_entries.nzval
-        GraphBasedSystems.randomize!(entry)
-    end
-    for entry in system.vector_entries
-        GraphBasedSystems.randomize!(entry)
-    end
-end
-
-SUITE["ldu"] = @benchmarkable ldu_solve!($system) samples=2 setup=(init!($system))
-SUITE["lu"] = @benchmarkable lu_solve!($system) samples=2 setup=(init!($system))
-SUITE["ldlt"] = @benchmarkable ldlt_solve!($system) samples=2 setup=(init!($system))
-SUITE["llt"] = @benchmarkable llt_solve!($system) samples=2 setup=(init!($system))

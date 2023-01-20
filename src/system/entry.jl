@@ -25,7 +25,7 @@ function Base.zero(::Type{Entry{ET}}) where ET
     return Entry{ET.parameters[2]}(dims...)
 end
 
-function randomize!(entry::Entry)
+function randomize!(entry::Entry, rand_function = randn)
     value = entry.value
-    entry.value = randn(eltype(value), size(value))
+    entry.value = rand_function(eltype(value), size(value))
 end

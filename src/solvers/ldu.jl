@@ -18,7 +18,7 @@ function ldu_factorization_cyclic!(entry_lu, offdiagonal_lu, diagonal_c, offdiag
     return
 end
 
-function ldu_factorization!(system)
+function ldu_factorization!(system::System)
     matrix_entries = system.matrix_entries
     diagonal_inverses = system.diagonal_inverses
     acyclic_children = system.acyclic_children
@@ -55,11 +55,10 @@ function ldu_backsubstitution_d!(vector, diagonal, diagonal_inverse)
     else
         vector.value = diagonal.value \ vector.value
     end
-    diagonal_inverse.isinverted = false
     return
 end
 
-function ldu_backsubstitution!(system)
+function ldu_backsubstitution!(system::System)
     matrix_entries = system.matrix_entries
     diagonal_inverses = system.diagonal_inverses
     vector_entries = system.vector_entries
@@ -84,7 +83,8 @@ function ldu_backsubstitution!(system)
     end
 end
 
-function ldu_solve!(system)
+function ldu_solve!(system::System)
+    reset_inverse_diagonals!(system)
     ldu_factorization!(system)
     ldu_backsubstitution!(system)
     return

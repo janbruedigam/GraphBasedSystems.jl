@@ -1,4 +1,4 @@
-function dfs(graph,v)
+function dfs(graph, v)
     n = nv(graph)
     visited = zeros(Bool, n)
     list = Int64[]
@@ -10,7 +10,7 @@ function dfs(graph,v)
     return list, cycleclosures
 end
 
-function _dfs(graph,v,p,list,cycleclosures,visited)
+function _dfs(graph, v, p, list, cycleclosures, visited)
     if !visited[v]
         visited[v] = true
         for node in all_neighbors(graph,v)
