@@ -76,18 +76,20 @@ A[16,30] = A[30,16] = 1
 A[20,36] = A[36,20] = 1
 
 
-system = System{Float64}(A, rand(0:3,size(A)[1]))
+system = System{Float64}(A, ones(Int,size(A)[1])*6)
 
-function init!(system)
-    for entry in system.matrix_entries.nzval
-        GraphBasedSystems.randomize!(entry)
-    end
-    for entry in system.vector_entries
-        GraphBasedSystems.randomize!(entry)
+function randomize_posdef!(system)
+    randomize!(system)
+    F = full_matrix(system)
+    while !isposdef(F)
+        for i=1:size(A)[1]
+            system.matrix_entries[i,i].value += I 
+        end
+        F = full_matrix(system)
     end
 end
 
-SUITE["ldu"] = @benchmarkable ldu_solve!($system) samples=2 setup=(init!($system))
-SUITE["lu"] = @benchmarkable lu_solve!($system) samples=2 setup=(init!($system))
-SUITE["ldlt"] = @benchmarkable ldlt_solve!($system) samples=2 setup=(init!($system))
-SUITE["llt"] = @benchmarkable llt_solve!($system) samples=2 setup=(init!($system))
+SUITE["ldu"] = @benchmarkable ldu_solve!($system) samples=2 setup=(randomize!($system))
+SUITE["lu"] = @benchmarkable lu_solve!($system) samples=2 setup=(randomize!($system))
+SUITE["ldlt"] = @benchmarkable ldlt_solve!($system) samples=2 setup=(randomize!($system))
+SUITE["llt"] = @benchmarkable llt_solve!($system) samples=2 setup=(randomize_posdef!($system))
