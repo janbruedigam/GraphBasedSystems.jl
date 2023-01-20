@@ -24,6 +24,9 @@ function lu_factorization!(system)
     cyclic_children = system.cyclic_children
 
     for v in system.dfs_list
+        for c in acyclic_children[v]
+            lu_factorization_acyclic!(matrix_entries[v,v], matrix_entries[v,c], matrix_entries[c,c], matrix_entries[c,v], diagonal_inverses[c])
+        end
         for c in cyclic_children[v]
             for cc in cyclic_children[v]
                 cc == c && break 
@@ -31,9 +34,6 @@ function lu_factorization!(system)
                 lu_factorization_cyclic!(matrix_entries[v,c], matrix_entries[v,cc], matrix_entries[cc,c])
                 lu_factorization_cyclic!(matrix_entries[c,v], matrix_entries[c,cc], matrix_entries[cc,v])
             end
-            lu_factorization_acyclic!(matrix_entries[v,v], matrix_entries[v,c], matrix_entries[c,c], matrix_entries[c,v], diagonal_inverses[c])
-        end
-        for c in acyclic_children[v]
             lu_factorization_acyclic!(matrix_entries[v,v], matrix_entries[v,c], matrix_entries[c,c], matrix_entries[c,v], diagonal_inverses[c])
         end
     end
