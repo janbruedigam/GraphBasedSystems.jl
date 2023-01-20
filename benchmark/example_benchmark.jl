@@ -1,7 +1,4 @@
 using GraphBasedSystems
-using LinearAlgebra
-GBS = GraphBasedSystems
-
 A = [
     0 1 0 1 1 0 1 0 1 0
     1 0 1 0 0 0 0 0 0 0
@@ -81,17 +78,14 @@ A[20,36] = A[36,20] = 1
 
 system = System{Float64}(A, rand(0:3,size(A)[1]))
 
-for i=1:10
+function init!(system)
     for entry in system.matrix_entries.nzval
-        GBS.randomize!(entry)
+        GraphBasedSystems.randomize!(entry)
     end
     for entry in system.vector_entries
-        GBS.randomize!(entry)
+        GraphBasedSystems.randomize!(entry)
     end
-
-    F = full_matrix(system)
-    f = full_vector(system)
-    ldu_solve!(system)
-    @test maximum(abs.(full_vector(system)-F\f)) < 1e-3
 end
 
+SUITE["ldu"] = @benchmarkable ldu_solve!($system) samples=2 setup=(init!($system))
+SUITE["lu"] = @benchmarkable lu_solve!($system) samples=2 setup=(init!($system))

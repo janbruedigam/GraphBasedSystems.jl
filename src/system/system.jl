@@ -82,6 +82,7 @@ struct System{N,T}
 
         full_dfs_graph = SimpleDiGraph(edgelist)
         cyclic_children = [unique(vcat(cycles[i]...)) for i=1:N]
+        cyclic_children = [intersect(dfs_list,cyclic_children[i]) for i=1:N]
 
         new{N,S}(matrix_entries, vector_entries, diagonal_inverses, acyclic_children, cyclic_children, parents, dfs_list, full_graph, full_dfs_graph)
     end
@@ -145,3 +146,6 @@ end
 # end
 
 full_vector(system) = vcat(getfield.(system.vector_entries,:value)...)
+
+reordered_matrix(system) = full_matrix(system)[system.dfs_list,system.dfs_list]
+reordered_vector(system) = full_vector(system)[system.dfs_list]

@@ -8,6 +8,8 @@ using Graphs
 export System,
     full_matrix,
     full_vector,
+    reordered_matrix,
+    reordered_vector,
     children,
     connections,
     parents,
