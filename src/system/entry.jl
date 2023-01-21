@@ -28,7 +28,7 @@ function Base.zero(::Type{Entry})
     return nothing
 end
 
-function randomize!(entry::Entry, rand_function = randn)
+function initialize!(entry::Entry, init_function = randn)
     value = entry.value
-    entry.value = rand_function(eltype(value), size(value))
+    entry.value = init_function(eltype(value), size(value))
 end

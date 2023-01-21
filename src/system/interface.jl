@@ -23,27 +23,27 @@ function ranges(dims::AbstractVector)
     return range_dict
 end
 
-function randomize!(system::System, rand_function = randn)
+function initialize!(system::System, init_function = randn)
     for entry in system.matrix_entries.nzval
-        randomize!(entry, rand_function)
+        initialize!(entry, init_function)
     end
     for entry in system.vector_entries
-        randomize!(entry, rand_function)
+        initialize!(entry, init_function)
     end
 end
 
-function randomize!(system::System{N,<:Symmetric}, rand_function = randn) where N
+function initialize!(system::System{N,<:Symmetric}, init_function = randn) where N
     matrix_entries = system.matrix_entries
 
     for entry in matrix_entries.nzval
-        randomize!(entry, rand_function)
+        initialize!(entry, init_function)
     end
     for i=1:N
         matrix_entries[i,i].value += matrix_entries[i,i].value'
     end
 
     for entry in system.vector_entries
-        randomize!(entry, rand_function)
+        initialize!(entry, init_function)
     end
 end
 

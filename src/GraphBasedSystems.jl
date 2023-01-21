@@ -11,7 +11,7 @@ export System,
 
     full_matrix,
     full_vector,
-    randomize!,
+    initialize!,
     reset_inverse_diagonals!,
     
     children,
