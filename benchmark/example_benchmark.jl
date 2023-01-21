@@ -77,21 +77,32 @@ A[13,21] = A[21,13] = 1
 A[16,30] = A[30,16] = 1
 A[20,36] = A[36,20] = 1
 
-
-system = System{Float64}(A, ones(Int,size(A)[1])*6)
-
 function randomize_posdef!(system)
-    randomize!(system)
-    F = full_matrix(system)
-    while !isposdef(F)
-        for i=1:size(A)[1]
-            system.matrix_entries[i,i].value += I 
-        end
-        F = full_matrix(system)
+    randomize!(system,rand)
+    for i=1:size(A)[1]
+        system.matrix_entries[i,i].value += 1000*I 
     end
 end
 
+
+system = System{Float64}(A, ones(Int,size(A)[1])*3)
+systemldlt = System{Float64}(A, ones(Int,size(A)[1])*3, symmetric=true)
+systemllt = System{Float64}(A, ones(Int,size(A)[1])*3, symmetric=true)
+
 SUITE["ldu"] = @benchmarkable ldu_solve!($system) samples=2 setup=(randomize!($system))
 SUITE["lu"] = @benchmarkable lu_solve!($system) samples=2 setup=(randomize!($system))
-SUITE["ldlt"] = @benchmarkable ldlt_solve!($system) samples=2 setup=(randomize!($system))
-SUITE["llt"] = @benchmarkable llt_solve!($system) samples=2 setup=(randomize_posdef!($system))
+SUITE["ldlt"] = @benchmarkable ldlt_solve!($systemldlt) samples=2 setup=(randomize!($systemldlt))
+SUITE["llt"] = @benchmarkable llt_solve!($systemllt) samples=2 setup=(randomize_posdef!($systemllt))
+
+# A = [
+#     0 1 1 1 1
+#     1 0 1 1 1
+#     1 1 0 1 1
+#     1 1 1 0 1
+#     1 1 1 1 0
+# ]
+
+
+
+
+

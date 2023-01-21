@@ -16,6 +16,10 @@ function llt_factorization_cyclic!(entry_lu, offdiagonal_lu, offdiagonal_ul)
     entry_lu.value -= offdiagonal_lu.value * offdiagonal_ul.value'
     return
 end
+# TODO currently allocates memory
+function llt_diagonal_root!(diagonal)
+    diagonal.value = sqrt(diagonal.value)
+end
 
 
 function llt_factorization!(system::System)
@@ -36,7 +40,7 @@ function llt_factorization!(system::System)
             end
             llt_factorization_acyclic!(matrix_entries[v,v], matrix_entries[v,c], matrix_entries[c,c], diagonal_inverses[c])
         end
-        matrix_entries[v,v].value = sqrt(matrix_entries[v,v].value)
+        llt_diagonal_root!(matrix_entries[v,v])
     end
     return
 end
