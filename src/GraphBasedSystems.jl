@@ -8,14 +8,16 @@ using Graphs
 export System,
     full_matrix,
     full_vector,
-    reordered_matrix,
-    reordered_vector,
+    randomize!,
+    
     children,
     connections,
     parents,
 
     ldu_solve!,
-    lu_solve!
+    lu_solve!,
+    ldlt_solve!,
+    llt_solve!
 
 
 include(joinpath("util", "custom_static.jl"))

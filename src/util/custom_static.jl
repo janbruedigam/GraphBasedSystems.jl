@@ -15,6 +15,6 @@ srand(N1, N2)= @SMatrix rand(N1, N2)
 
 
 # To fix StaticArray bug
-Base.:*(::SMatrix{N,0,T,0},::SVector{0}) where {T,N} = szeros(T,N)
-Base.:*(::SMatrix{N,0,T,0},::SMatrix{0,M,T,0}) where {T,N,M} = szeros(T,N,M)
-Base.inv(::SMatrix{0,0,T,0}) where T = szeros(T,0,0)
+Base.:*(::SMatrix{N,0,T,0}, ::SVector{0}) where {T,N} = szeros(T, N)
+Base.:*(::SMatrix{N,0,T,0}, ::SMatrix{0,M,T,0}) where {T,N,M} = szeros(T, N, M)
+Base.inv(::SMatrix{0,0,T,0}) where T = szeros(T, 0, 0)

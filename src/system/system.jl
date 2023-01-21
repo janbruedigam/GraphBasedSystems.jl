@@ -1,33 +1,28 @@
-abstract type Symmetric end                     # symmetric = true
-abstract type BlockSymmetric <: Symmetric end   # symmetric = true
-abstract type SparsitySymmetric end             # symmetric = false, Any matrix is sparsity symmetric since zero entries can be assumed nonzero
+abstract type Symmetric end
+abstract type Unsymmetric end
 
 struct System{N,T}
-    matrix_entries::SparseMatrixCSC{GraphBasedSystems.Entry, Int64}
-    vector_entries::Vector{Entry}
-    diagonal_inverses::Vector{Entry}
-    acyclic_children::Vector{Vector{Int64}} # Contains direct children that are not part of a cycle
-    cyclic_children::Vector{Vector{Int64}}  # Contains direct and indirect children that are part of a cycle
-    parents::Vector{Vector{Int64}}          # Contains direct and cycle-opening parents
-    dfs_list::SVector{N,Int64}
-    graph::SimpleGraph{Int64}
-    dfs_graph::SimpleDiGraph{Int64}
+    matrix_entries::SparseMatrixCSC{GraphBasedSystems.Entry, Int64} # matrix entries of the system
+    vector_entries::Vector{Entry}                                   # vector entries of the system
+    diagonal_inverses::Vector{Entry}                                # stores inverses of diagonal matrix entries once calculated
+    acyclic_children::Vector{Vector{Int64}} # contains direct children that are not part of a cycle
+    cyclic_children::Vector{Vector{Int64}}  # contains direct and indirect children that are part of a cycle (in dfs_list order)
+    parents::Vector{Vector{Int64}}          # contains direct and cycle-opening parents
+    dfs_list::SVector{N,Int64}      # depth-first search list of nodes [last-found node, ..., first-found node]
+    graph::SimpleGraph{Int64}       # the graph built from the adjacency matrix
+    dfs_graph::SimpleDiGraph{Int64} # the directed graph built from the depth-first search
 
     function System{T}(A, dims; force_static = false, symmetric = false) where T
         N = length(dims)
-        if symmetric
-            all(dims .== 1) ? S = Symmetric : S = BlockSymmetric
-        else
-            S = SparsitySymmetric
-        end
-        static = force_static || all(dims.<=10)
+        symmetric ? S = Symmetric : S = Unsymmetric
+        static = force_static || all(dims .<= 10) # StaticArrays becomes slow for matrices larger than 10x10
 
         full_graph = Graph(A)
 
         matrix_entries = spzeros(Entry,N,N)
 
         for (i,dimi) in enumerate(dims)
-                matrix_entries[i,i] = Entry{T}(dimi, dimi, static = static)
+            matrix_entries[i,i] = Entry{T}(dimi, dimi, static = static)
         end
 
         vector_entries = [Entry{T}(dim, static = static) for dim in dims]
@@ -43,7 +38,7 @@ struct System{N,T}
         for (i,graph) in enumerate(graphs)
             root = roots[i]
             dfs_graph = dfs_tree(graph, root)
-            sub_dfs_list, cycle_closures = dfs(graph, root)
+            sub_dfs_list, cycle_closures = depth_first_search(graph, root)
             append!(dfs_list, sub_dfs_list)
 
             cycle_dfs_graph = copy(dfs_graph)
@@ -82,7 +77,7 @@ struct System{N,T}
 
         full_dfs_graph = SimpleDiGraph(edgelist)
         cyclic_children = [unique(vcat(cycles[i]...)) for i=1:N]
-        cyclic_children = [intersect(dfs_list,cyclic_children[i]) for i=1:N]
+        cyclic_children = [intersect(dfs_list, cyclic_children[i]) for i=1:N]
 
         new{N,S}(matrix_entries, vector_entries, diagonal_inverses, acyclic_children, cyclic_children, parents, dfs_list, full_graph, full_dfs_graph)
     end
@@ -91,61 +86,87 @@ struct System{N,T}
 end
 
 function Base.show(io::IO, mime::MIME{Symbol("text/plain")}, system::System{N,S}) where {N,S}
-    if S <: BlockSymmetric
-        print(io, "BlockSymmetric ")
-    elseif S <: Symmetric
-        print(io, "Symmetric ")
-    elseif S <: SparsitySymmetric
-        print(io, "SparsitySymmetric ")
+    if S <: Symmetric
+        print(io, "Symmetric")
+    elseif S <: Unsymmetric
+        print(io, "Unsymmetric ")
     end
     println(io, "System with "*string(N)*" nodes.")
     SparseArrays._show_with_braille_patterns(io, system.matrix_entries)
 end
 
 
-@inline children(system, v) = outneighbors(system.dfs_graph, v)
-@inline connections(system, v) = neighbors(system.graph, v)
-@inline parents(system, v) = inneighbors(system.dfs_graph, v)
+@inline children(system::System, v) = outneighbors(system.dfs_graph, v) # all direct children of v
+@inline connections(system::System, v) = neighbors(system.graph, v)     # all connected nodes of v
+@inline parents(system::System, v) = inneighbors(system.dfs_graph, v)   # same elements as system.parents[v], but potentially different order
+
+dimensions(system::System{N}) where N = [size(system.vector_entries[i].value)[1] for i=1:N]
+function ranges(system::System{N}) where N
+    dims = dimensions(system)
+    range_dict = Dict(1=>1:dims[1])
+    for i=2:N
+        range_dict[i] = last(range_dict[i-1])+1:sum(dims[1:i])
+    end
+
+    return range_dict
+end
 
 # There probably exists a smarter way of getting the dense matrix from the spares one 
 function full_matrix(system::System{N}) where N
-    dims = [length(system.vector_entries[i].value) for i=1:N]
-
-    range = [1:dims[1]]
-
-    for (i,dim) in enumerate(collect(Iterators.rest(dims, 2)))
-        push!(range,sum(dims[1:i])+1:sum(dims[1:i])+dim)
-    end
-    A = zeros(sum(dims),sum(dims))
+    dims = dimensions(system)
+    range_dict = ranges(system)
+    A = zeros(sum(dims), sum(dims))
 
     for (i,row) in enumerate(system.matrix_entries.rowval)
-        col = findfirst(x->i<x,system.matrix_entries.colptr)-1
-            A[range[row],range[col]] = system.matrix_entries[row,col].value
+        col = findfirst(x -> i<x, system.matrix_entries.colptr)-1
+        A[range_dict[row],range_dict[col]] = system.matrix_entries[row,col].value
     end
     return A
 end
 
-# function full_matrix(system::System{N,<:Symmetric}) where N
-#     dims = [length(system.vector_entries[i].value) for i=1:N]
+function full_matrix(system::System{N,<:Symmetric}) where N
+    dims = dimensions(system)
+    range_dict = ranges(system)
+    A = zeros(sum(dims),sum(dims))
 
-#     range = [1:dims[1]]
+    for (i,row) in enumerate(system.matrix_entries.rowval)
+        col = findfirst(x -> i<x, system.matrix_entries.colptr)-1
+        A[range_dict[row],range_dict[col]] = system.matrix_entries[row,col].value
+        if col != row
+            A[range_dict[col],range_dict[row]] = system.matrix_entries[row,col].value'
+        end
+    end
+    return A
+end
 
-#     for (i,dim) in enumerate(collect(Iterators.rest(dims, 2)))
-#         push!(range,sum(dims[1:i])+1:sum(dims[1:i])+dim)
-#     end
-#     A = zeros(sum(dims),sum(dims))
+full_vector(system::System) = vcat(getfield.(system.vector_entries,:value)...)
 
-#     for (i,row) in enumerate(system.matrix_entries.rowval)
-#         col = findfirst(x->i<x,system.matrix_entries.colptr)-1
-#         A[range[row],range[col]] = system.matrix_entries[row,col].value
-#         if col != row
-#             A[range[col],range[row]] = system.matrix_entries[row,col].value'
-#         end
-#     end
-#     return A
-# end
+function randomize!(system::System, rand_function = randn)
+    for entry in system.matrix_entries.nzval
+        randomize!(entry, rand_function)
+    end
+    for entry in system.vector_entries
+        randomize!(entry, rand_function)
+    end
+end
 
-full_vector(system) = vcat(getfield.(system.vector_entries,:value)...)
+function randomize!(system::System{N,<:Symmetric}, rand_function = randn) where N
+    matrix_entries = system.matrix_entries
 
-reordered_matrix(system) = full_matrix(system)[system.dfs_list,system.dfs_list]
-reordered_vector(system) = full_vector(system)[system.dfs_list]
+    for entry in matrix_entries.nzval
+        randomize!(entry, rand_function)
+    end
+    for i=1:N
+        matrix_entries[i,i].value += matrix_entries[i,i].value'
+    end
+
+    for entry in system.vector_entries
+        randomize!(entry, rand_function)
+    end
+end
+
+function reset_inverse_diagonals!(system::System)
+    for entry in system.diagonal_inverses
+        entry.isinverted = false
+    end
+end
