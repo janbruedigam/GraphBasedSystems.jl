@@ -20,7 +20,7 @@ dimensions = [2; 3; 0; 1] # The dimension of row/column
 
 system = System{Float64}(graph_matrix, dimensions; symmetric=false) # The resulting linear system. Set symmetric=true for symmetric systems
 
-randomize!(system) # Randomize all system entries
+initialize!(system) # initialize! all system entries
 system.matrix_entries[1,2].value = rand(2,3) # Directly set the value of a matrix entry
 system.vector_entries[4].value = rand(1) # Directly set the value of a vector entry
 

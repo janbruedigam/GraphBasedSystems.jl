@@ -16,3 +16,7 @@ end
 @safetestset "LLᵀ Tests" begin
     include("llt_test.jl")
 end
+
+@safetestset "Interface Tests" begin
+    include("interface.jl")
+end

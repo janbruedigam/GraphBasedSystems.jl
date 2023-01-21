@@ -7,7 +7,7 @@ include("adjacency_matrix.jl")
 system = System{Float64}(A, rand(0:3, size(A)[1]), symmetric=true)
 
 for i=1:10
-    randomize!(system)
+    initialize!(system)
     F = full_matrix(system)
     while !isposdef(F)
         for i=1:size(A)[1]

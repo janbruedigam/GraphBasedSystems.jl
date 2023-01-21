@@ -24,6 +24,8 @@ function ldlt_factorization!(system::System)
     acyclic_children = system.acyclic_children
     cyclic_children = system.cyclic_children
 
+    reset_inverse_diagonals!(system)
+
     for v in system.dfs_list
         for c in acyclic_children[v]
             ldlt_factorization_acyclic!(matrix_entries[v,v], matrix_entries[v,c], matrix_entries[c,c], diagonal_inverses[c])
@@ -83,7 +85,6 @@ function ldlt_backsubstitution!(system::System)
 end
 
 function ldlt_solve!(system::System)
-    reset_inverse_diagonals!(system)
     ldlt_factorization!(system)
     ldlt_backsubstitution!(system)
     return

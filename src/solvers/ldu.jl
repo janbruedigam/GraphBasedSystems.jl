@@ -24,6 +24,8 @@ function ldu_factorization!(system::System)
     acyclic_children = system.acyclic_children
     cyclic_children = system.cyclic_children
 
+    reset_inverse_diagonals!(system)
+
     for v in system.dfs_list
         for c in acyclic_children[v]
             ldu_factorization_acyclic!(matrix_entries[v,v], matrix_entries[v,c], matrix_entries[c,c], matrix_entries[c,v], diagonal_inverses[c])
@@ -84,7 +86,6 @@ function ldu_backsubstitution!(system::System)
 end
 
 function ldu_solve!(system::System)
-    reset_inverse_diagonals!(system)
     ldu_factorization!(system)
     ldu_backsubstitution!(system)
     return
