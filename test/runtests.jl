@@ -17,6 +17,10 @@ end
     include("llt_test.jl")
 end
 
+@safetestset "Algebra Tests" begin
+    include("algebra.jl")
+end
+
 @safetestset "Interface Tests" begin
     include("interface.jl")
 end

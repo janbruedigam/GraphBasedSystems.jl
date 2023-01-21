@@ -90,3 +90,12 @@ function ldu_solve!(system::System)
     ldu_backsubstitution!(system)
     return
 end  
+
+function ldu_matrix_solve!(A::System, B::SparseMatrixCSC{Entry, Int64}; keep_vector = true)
+    keep_vector && (vector_entries = deepcopy(A.vector_entries))
+    ldu_factorization!(A)
+    C = matrix_backsubsitution!(A, B, ldu_backsubstitution!)
+    keep_vector && (A.vector_entries .= vector_entries)
+
+    return C
+end

@@ -77,9 +77,9 @@ A[13,21] = A[21,13] = 1
 A[16,30] = A[30,16] = 1
 A[20,36] = A[36,20] = 1
 
-function initialize!_posdef!(system)
+function initialize!_posdef!(system::System{N}) where N 
     initialize!(system,rand)
-    for i=1:size(A)[1]
+    for i=1:N
         system.matrix_entries[i,i].value += 1000*I 
     end
 end

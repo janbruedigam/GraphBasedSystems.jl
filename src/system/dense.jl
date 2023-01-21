@@ -16,4 +16,4 @@ function full_matrix(matrix_entries::SparseMatrixCSC, symmetric::Bool, dimension
 end
 
 full_vector(system::System) = full_vector(system.vector_entries, system.dims)
-full_vector(vector_entries::AbstractVector, dimensions_rows) = vcat([getfield(vector_entries[i],:value) for i=1:size(dimensions_rows)[1]]...)
+full_vector(vector_entries::AbstractVector, dimensions_rows::SVector{N}) where N = vcat([getfield(vector_entries[i], :value) for i=1:N]...)

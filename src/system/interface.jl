@@ -2,9 +2,6 @@
 @inline connections(system::System, v) = neighbors(system.graph, v)     # all connected nodes of v
 @inline parents(system::System, v) = inneighbors(system.dfs_graph, v)   # same elements as system.parents[v], but potentially different order
 
-LinearAlgebra.issymmetric(::System{N, Symmetric}) where N = true
-LinearAlgebra.issymmetric(::System{N, Unsymmetric}) where N = false
-
 function ranges(system::System{N}) where N
     dims = system.dims
     range_dict = Dict(1=>1:dims[1])
@@ -51,4 +48,20 @@ function reset_inverse_diagonals!(system::System)
     for entry in system.diagonal_inverses
         entry.isinverted = false
     end
+end
+
+adjacency(system::System) = adjacency(system.matrix_entries)
+function adjacency(M::SparseMatrixCSC{Entry, Int64})
+    N = size(M)[1]
+    adj = zeros(Int64,N,N)
+
+    for i=1:N
+        for j=1:N
+            i == j && continue
+            Mij = M[i,j]
+            Mij isa Entry{Nothing} ? adj[i,j] = 0 : adj[i,j] = 1
+        end
+    end
+
+    return adj
 end

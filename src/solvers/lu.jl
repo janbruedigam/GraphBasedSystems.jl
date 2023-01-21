@@ -89,3 +89,12 @@ function lu_solve!(system::System)
     lu_backsubstitution!(system)
     return
 end
+
+function lu_matrix_solve!(A::System, B::SparseMatrixCSC{Entry, Int64}; keep_vector = true)
+    keep_vector && (vector_entries = deepcopy(A.vector_entries))
+    lu_factorization!(A)
+    C = matrix_backsubsitution!(A, B, lu_backsubstitution!)
+    keep_vector && (A.vector_entries .= vector_entries)
+
+    return C
+end
