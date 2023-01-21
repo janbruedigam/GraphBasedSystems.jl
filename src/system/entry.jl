@@ -25,7 +25,7 @@ function Base.zero(::Type{Entry{ET}}) where ET
     return Entry{ET.parameters[2]}(dims...)
 end
 function Base.zero(::Type{Entry})
-    return 0
+    return nothing
 end
 
 function randomize!(entry::Entry, rand_function = randn)

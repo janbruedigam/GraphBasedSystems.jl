@@ -11,6 +11,7 @@ struct System{N,T}
     dfs_list::SVector{N,Int64}      # depth-first search list of nodes [last-found node, ..., first-found node]
     graph::SimpleGraph{Int64}       # the graph built from the adjacency matrix
     dfs_graph::SimpleDiGraph{Int64} # the directed graph built from the depth-first search
+    dims::Vector{Int64} # Dimensions of the matrix entries
 
     function System{T}(A, dims; force_static = false, symmetric = false) where T
         N = length(dims)
@@ -79,7 +80,7 @@ struct System{N,T}
         cyclic_children = [unique(vcat(cycles[i]...)) for i=1:N]
         cyclic_children = [intersect(dfs_list, cyclic_children[i]) for i=1:N]
 
-        new{N,S}(matrix_entries, vector_entries, diagonal_inverses, acyclic_children, cyclic_children, parents, dfs_list, full_graph, full_dfs_graph)
+        new{N,S}(matrix_entries, vector_entries, diagonal_inverses, acyclic_children, cyclic_children, parents, dfs_list, full_graph, full_dfs_graph, dims)
     end
 
     System(A, dims; force_static = false, symmetric = false) = System{Float64}(A, dims; force_static, symmetric)
@@ -93,80 +94,4 @@ function Base.show(io::IO, mime::MIME{Symbol("text/plain")}, system::System{N,S}
     end
     println(io, "System with "*string(N)*" nodes.")
     SparseArrays._show_with_braille_patterns(io, system.matrix_entries)
-end
-
-
-@inline children(system::System, v) = outneighbors(system.dfs_graph, v) # all direct children of v
-@inline connections(system::System, v) = neighbors(system.graph, v)     # all connected nodes of v
-@inline parents(system::System, v) = inneighbors(system.dfs_graph, v)   # same elements as system.parents[v], but potentially different order
-
-dimensions(system::System{N}) where N = [size(system.vector_entries[i].value)[1] for i=1:N]
-function ranges(system::System{N}) where N
-    dims = dimensions(system)
-    range_dict = Dict(1=>1:dims[1])
-    for i=2:N
-        range_dict[i] = last(range_dict[i-1])+1:sum(dims[1:i])
-    end
-
-    return range_dict
-end
-
-# There probably exists a smarter way of getting the dense matrix from the spares one 
-function full_matrix(system::System{N}) where N
-    dims = dimensions(system)
-    range_dict = ranges(system)
-    A = zeros(sum(dims), sum(dims))
-
-    for (i,row) in enumerate(system.matrix_entries.rowval)
-        col = findfirst(x -> i<x, system.matrix_entries.colptr)-1
-        A[range_dict[row],range_dict[col]] = system.matrix_entries[row,col].value
-    end
-    return A
-end
-
-function full_matrix(system::System{N,<:Symmetric}) where N
-    dims = dimensions(system)
-    range_dict = ranges(system)
-    A = zeros(sum(dims),sum(dims))
-
-    for (i,row) in enumerate(system.matrix_entries.rowval)
-        col = findfirst(x -> i<x, system.matrix_entries.colptr)-1
-        A[range_dict[row],range_dict[col]] = system.matrix_entries[row,col].value
-        if col != row
-            A[range_dict[col],range_dict[row]] = system.matrix_entries[row,col].value'
-        end
-    end
-    return A
-end
-
-full_vector(system::System) = vcat(getfield.(system.vector_entries,:value)...)
-
-function randomize!(system::System, rand_function = randn)
-    for entry in system.matrix_entries.nzval
-        randomize!(entry, rand_function)
-    end
-    for entry in system.vector_entries
-        randomize!(entry, rand_function)
-    end
-end
-
-function randomize!(system::System{N,<:Symmetric}, rand_function = randn) where N
-    matrix_entries = system.matrix_entries
-
-    for entry in matrix_entries.nzval
-        randomize!(entry, rand_function)
-    end
-    for i=1:N
-        matrix_entries[i,i].value += matrix_entries[i,i].value'
-    end
-
-    for entry in system.vector_entries
-        randomize!(entry, rand_function)
-    end
-end
-
-function reset_inverse_diagonals!(system::System)
-    for entry in system.diagonal_inverses
-        entry.isinverted = false
-    end
 end
