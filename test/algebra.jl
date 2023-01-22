@@ -6,7 +6,7 @@ include("adjacency_matrix.jl")
 for i=1:5
     r1 = randn()
     r2 = randn()
-    system = System{Float64}(A, rand(0:3, size(A)[1]))
+    system = System{Float64}(A, rand(0:20, size(A)[1]))
     initialize!(system)
 
     F = full_matrix(system)

@@ -19,7 +19,10 @@ function Base.show(io::IO, mime::MIME{Symbol("text/plain")}, entry::Entry)
 end
 
 
-Base.zero(::Entry{ET}) where ET = Entry(zero(ET), false)
+function Base.zero(::Entry{ET}) where ET
+    dims = [ET.parameters[1].parameters...]
+    return Entry{ET.parameters[2]}(dims...)
+end
 Base.zero(::Type{Entry}) = Entry(nothing, false)
 
 Base.:+(E1::Entry, E2::Entry) = Entry(E1.value + E2.value, false)
