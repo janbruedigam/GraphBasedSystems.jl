@@ -7,7 +7,7 @@ include("adjacency_matrix.jl")
 function initialize!_posdef!(system::System{N}) where N 
     initialize!(system,rand)
     for i=1:N
-        system.matrix_entries[i,i].value += 10*I 
+        system.matrix_entries[i,i].value += 100*I 
     end
     # display(isposdef(full_matrix(system)))
 end
