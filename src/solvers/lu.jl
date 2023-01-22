@@ -90,11 +90,11 @@ function lu_solve!(system::System)
     return
 end
 
-function lu_matrix_solve!(A::System, B::SparseMatrixCSC{Entry, Int64}; keep_vector = true)
-    keep_vector && (vector_entries = deepcopy(A.vector_entries))
-    lu_factorization!(A)
-    C = matrix_backsubsitution!(A, B, lu_backsubstitution!)
-    keep_vector && (A.vector_entries .= vector_entries)
+function lu_matrix_solve!(system::System, matrix::SparseMatrixCSC{Entry, Int64}; keep_vector = true)
+    keep_vector && (vector_entries = deepcopy(system.vector_entries))
+    lu_factorization!(system)
+    C = matrix_backsubsitution!(system, matrix, lu_backsubstitution!)
+    keep_vector && (system.vector_entries .= vector_entries)
 
     return C
 end

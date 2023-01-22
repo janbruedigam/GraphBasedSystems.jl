@@ -139,4 +139,4 @@ function Base.:/(S1::System, r::Real)
     return S2
 end
 Base.:\(r::Real, S::System) = S/r
-Base.:\(A::System, B::SparseMatrixCSC{Entry, Int64}) = lu_matrix_solve!(A, B; keep_vector = true)
+Base.:\(system::System, matrix::SparseMatrixCSC{Entry, Int64}) = lu_matrix_solve!(system, matrix; keep_vector = true)

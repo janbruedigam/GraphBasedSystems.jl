@@ -90,11 +90,11 @@ function ldlt_solve!(system::System)
     return
 end  
 
-function ldlt_matrix_solve!(A::System, B::SparseMatrixCSC{Entry, Int64}; keep_vector = true)
-    keep_vector && (vector_entries = deepcopy(A.vector_entries))
-    ldlt_factorization!(A)
-    C = matrix_backsubsitution!(A, B, ldlt_backsubstitution!)
-    keep_vector && (A.vector_entries .= vector_entries)
+function ldlt_matrix_solve!(system::System, matrix::SparseMatrixCSC{Entry, Int64}; keep_vector = true)
+    keep_vector && (vector_entries = deepcopy(system.vector_entries))
+    ldlt_factorization!(system)
+    C = matrix_backsubsitution!(system, matrix, ldlt_backsubstitution!)
+    keep_vector && (system.vector_entries .= vector_entries)
 
     return C
 end

@@ -18,9 +18,9 @@ end
 end
 
 @safetestset "Algebra Tests" begin
-    include("algebra.jl")
+    include("algebra_test.jl")
 end
 
 @safetestset "Interface Tests" begin
-    include("interface.jl")
+    include("interface_test.jl")
 end

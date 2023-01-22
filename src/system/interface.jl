@@ -51,14 +51,14 @@ function reset_inverse_diagonals!(system::System)
 end
 
 adjacency(system::System) = adjacency(system.matrix_entries)
-function adjacency(M::SparseMatrixCSC{Entry, Int64})
-    N = size(M)[1]
+function adjacency(matrix::SparseMatrixCSC{Entry, Int64})
+    N = size(matrix)[1]
     adj = zeros(Int64,N,N)
 
     for i=1:N
         for j=1:N
             i == j && continue
-            Mij = M[i,j]
+            Mij = matrix[i,j]
             Mij isa Entry{Nothing} ? adj[i,j] = 0 : adj[i,j] = 1
         end
     end
