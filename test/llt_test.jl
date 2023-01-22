@@ -22,7 +22,7 @@ for i=1:5
 end
 
 for i=1:5
-    system = System{Float64}(A, ones(Int64, size(A)[1]), symmetric=true)
+    system = System{Float64}(A, rand(0:3, size(A)[1]), symmetric=true)
     initialize!(system)
     Bmat = deepcopy(system.matrix_entries)
     F2 = full_matrix(Bmat,false,system.dims,system.dims)

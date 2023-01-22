@@ -47,6 +47,7 @@ include(joinpath("system", "graph_functions.jl"))
 include(joinpath("system", "interface.jl"))
 include(joinpath("system", "dense.jl"))
 
+include(joinpath("solvers", "matrix.jl"))
 include(joinpath("solvers", "lu.jl"))
 include(joinpath("solvers", "llt.jl"))
 include(joinpath("solvers", "ldlt.jl"))
