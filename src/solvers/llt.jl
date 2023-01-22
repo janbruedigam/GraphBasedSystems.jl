@@ -59,10 +59,7 @@ function llt_backsubstitution_d!(vector, diagonal, diagonal_inverse)
     if diagonal_inverse.isinverted
         vector.value = diagonal_inverse.value * vector.value
     else
-        invdiagonal = inv(diagonal.value)
-        diagonal_inverse.value = invdiagonal
-        diagonal_inverse.isinverted = true
-        vector.value = diagonal_inverse.value * vector.value
+        vector.value = diagonal.value \ vector.value
     end
     return
 end
@@ -98,3 +95,12 @@ function llt_solve!(system::System)
     llt_backsubstitution!(system)
     return
 end  
+
+function llt_matrix_solve!(system::System, matrix::SparseMatrixCSC{Entry, Int64}; keep_vector = true)
+    keep_vector && (vector_entries = deepcopy(system.vector_entries))
+    llt_factorization!(system)
+    C = matrix_backsubsitution!(system, matrix, llt_backsubstitution!)
+    keep_vector && (system.vector_entries .= vector_entries)
+
+    return C
+end

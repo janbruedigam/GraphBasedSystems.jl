@@ -1,8 +1,8 @@
 abstract type Symmetric end
 abstract type Unsymmetric end
 
-struct System{N,T}
-    matrix_entries::SparseMatrixCSC{GraphBasedSystems.Entry, Int64} # matrix entries of the system
+struct System{N,S}
+    matrix_entries::SparseMatrixCSC{Entry, Int64} # matrix entries of the system
     vector_entries::Vector{Entry}                                   # vector entries of the system
     diagonal_inverses::Vector{Entry}                                # stores inverses of diagonal matrix entries once calculated
     acyclic_children::Vector{Vector{Int64}} # contains direct children that are not part of a cycle
@@ -11,7 +11,7 @@ struct System{N,T}
     dfs_list::SVector{N,Int64}      # depth-first search list of nodes [last-found node, ..., first-found node]
     graph::SimpleGraph{Int64}       # the graph built from the adjacency matrix
     dfs_graph::SimpleDiGraph{Int64} # the directed graph built from the depth-first search
-    dims::Vector{Int64} # Dimensions of the matrix entries
+    dims::SVector{N,Int64} # Dimensions of the matrix entries
 
     function System{T}(A, dims; force_static = false, symmetric = false) where T
         N = length(dims)
@@ -95,3 +95,48 @@ function Base.show(io::IO, mime::MIME{Symbol("text/plain")}, system::System{N,S}
     println(io, "System with "*string(N)*" nodes.")
     SparseArrays._show_with_braille_patterns(io, system.matrix_entries)
 end
+
+
+LinearAlgebra.issymmetric(::System{N, Symmetric}) where N = true
+LinearAlgebra.issymmetric(::System{N, Unsymmetric}) where N = false
+
+function SparseArrays.HigherOrderFns._noshapecheck_map(f::Tf, A::SparseMatrixCSC{Entry, Int64}, B::SparseMatrixCSC{Entry, Int64}) where {Tf}
+    maxnnzC = Int(min(widelength(A), _sumnnzs(A, B)))
+    C = _allocres(size(A), Int64,  Entry, maxnnzC)
+    return _map_zeropres!(f, C, A, B)
+end
+
+function Base.:+(S1::System, S2::System)
+    S3 = deepcopy(S1)
+    S3.matrix_entries .= S1.matrix_entries + S2.matrix_entries
+    S3.vector_entries .= S1.vector_entries + S2.vector_entries
+    return S3
+end
+function Base.:-(S1::System, S2::System)
+    S3 = deepcopy(S1)
+    S3.matrix_entries .= S1.matrix_entries - S2.matrix_entries
+    S3.vector_entries .= S1.vector_entries - S2.vector_entries
+    return S3
+end
+function Base.:*(S1::System, S2::System) # Doesn't make much sense, but implemented for convenience
+    C = S1.matrix_entries * S2.matrix_entries
+    adj = adjacency(C)
+    S3 = System{Float64}(adj, S1.dims)
+    S3.matrix_entries .= C
+    return S3
+end
+function Base.:*(S1::System, r::Real)
+    S2 = deepcopy(S1)
+    S2.matrix_entries.nzval .*= r
+    S2.vector_entries .*= r
+    return S2
+end
+Base.:*(r::Real, S::System) = S*r
+function Base.:/(S1::System, r::Real)
+    S2 = deepcopy(S1)
+    S2.matrix_entries.nzval ./= r
+    S2.vector_entries ./= r
+    return S2
+end
+Base.:\(r::Real, S::System) = S/r
+Base.:\(system::System, matrix::SparseMatrixCSC{Entry, Int64}) = lu_matrix_solve!(system, matrix; keep_vector = true)
