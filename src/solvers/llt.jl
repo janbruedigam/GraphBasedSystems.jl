@@ -59,10 +59,7 @@ function llt_backsubstitution_d!(vector, diagonal, diagonal_inverse)
     if diagonal_inverse.isinverted
         vector.value = diagonal_inverse.value * vector.value
     else
-        invdiagonal = inv(diagonal.value)
-        diagonal_inverse.value = invdiagonal
-        diagonal_inverse.isinverted = true
-        vector.value = diagonal_inverse.value * vector.value
+        vector.value = diagonal.value \ vector.value
     end
     return
 end
