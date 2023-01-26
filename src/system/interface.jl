@@ -2,19 +2,16 @@
 @inline connections(system::System, v) = neighbors(system.graph, v)     # all connected nodes of v
 @inline parents(system::System, v) = inneighbors(system.dfs_graph, v)   # same elements as system.parents[v], but potentially different order
 
-function ranges(system::System{N}) where N
-    dims = system.dims
-    range_dict = Dict(1=>1:dims[1])
-    for i=2:N
-        range_dict[i] = last(range_dict[i-1])+1:sum(dims[1:i])
-    end
 
-    return range_dict
-end
-function ranges(dims::AbstractVector)
+ranges(system::System{N}; actives = sones(Bool, N)) where N = ranges(system.dims; actives)
+function ranges(dims::AbstractVector; actives = sones(Bool, size(dims)[1]))
     range_dict = Dict(1=>1:dims[1])
     for i=2:size(dims)[1]
         range_dict[i] = last(range_dict[i-1])+1:sum(dims[1:i])
+    end
+
+    for i=1:size(dims)[1]
+        !actives[i] && delete!(range_dict,i)
     end
 
     return range_dict

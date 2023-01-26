@@ -23,21 +23,20 @@ function ldu_factorization!(system::System)
     diagonal_inverses = system.diagonal_inverses
     acyclic_children = system.acyclic_children
     cyclic_children = system.cyclic_children
-    active = system.active
+    actives = system.actives
 
     reset_inverse_diagonals!(system)
 
     for v in system.dfs_list
-        !active[v] && continue
-
+        !actives[v] && continue
         for c in acyclic_children[v]
-            !active[c] && continue
+            !actives[c] && continue
             ldu_factorization_acyclic!(matrix_entries[v,v], matrix_entries[v,c], matrix_entries[c,c], matrix_entries[c,v], diagonal_inverses[c])
         end
         for c in cyclic_children[v]
-            !active[c] && continue
+            !actives[c] && continue
             for cc in cyclic_children[v]
-                !active[cc] && continue
+                !actives[cc] && continue
                 cc == c && break 
                 (cc ∉ acyclic_children[c] && cc ∉ cyclic_children[c]) && continue
                 ldu_factorization_cyclic!(matrix_entries[v,c], matrix_entries[v,cc], matrix_entries[cc,cc], matrix_entries[cc,c])
@@ -74,24 +73,24 @@ function ldu_backsubstitution!(system::System)
     cyclic_children = system.cyclic_children
     parents = system.parents
     dfs_list = system.dfs_list
-    active = system.active
+    actives = system.actives
 
     for v in dfs_list
-        !active[v] && continue
+        !actives[v] && continue
         for c in cyclic_children[v]
-            !active[c] && continue
+            !actives[c] && continue
             ldu_backsubstitution_l!(vector_entries[v], matrix_entries[v,c], vector_entries[c])
         end
         for c in acyclic_children[v]
-            !active[c] && continue
+            !actives[c] && continue
             ldu_backsubstitution_l!(vector_entries[v], matrix_entries[v,c], vector_entries[c])
         end
     end
     for v in reverse(dfs_list)
-        !active[v] && continue
+        !actives[v] && continue
         ldu_backsubstitution_d!(vector_entries[v], matrix_entries[v,v], diagonal_inverses[v])
         for p in parents[v]
-            !active[p] && continue
+            !actives[p] && continue
             ldu_backsubstitution_u!(vector_entries[v], matrix_entries[v,p], vector_entries[p])
         end
     end

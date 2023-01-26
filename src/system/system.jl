@@ -8,7 +8,7 @@ mutable struct System{N,S}
     acyclic_children::Vector{Vector{Int64}} # contains direct children that are not part of a cycle
     cyclic_children::Vector{Vector{Int64}}  # contains direct and indirect children that are part of a cycle (in dfs_list order)
     parents::Vector{Vector{Int64}}          # contains direct and cycle-opening parents
-    active::SVector{N,Bool}                 # indicates if the node should be considered or not
+    actives::SVector{N,Bool}                 # indicates if the node should be considered or not
     dfs_list::SVector{N,Int64}      # depth-first search list of nodes [last-found node, ..., first-found node]
     graph::SimpleGraph{Int64}       # the graph built from the adjacency matrix
     dfs_graph::SimpleDiGraph{Int64} # the directed graph built from the depth-first search

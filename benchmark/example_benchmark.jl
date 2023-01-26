@@ -12,9 +12,9 @@ function initialize!_posdef!(system::System{N}) where N
 end
 
 
-system = System{Float64}(A, ones(Int,size(A)[1])*3)
-systemldlt = System{Float64}(A, ones(Int,size(A)[1])*3, symmetric=true)
-systemllt = System{Float64}(A, ones(Int,size(A)[1])*3, symmetric=true)
+system = System{Float64}(A, ones(Int,N)*3)
+systemldlt = System{Float64}(A, ones(Int,N)*3, symmetric=true)
+systemllt = System{Float64}(A, ones(Int,N)*3, symmetric=true)
 
 SUITE["sparse_ldu"] = @benchmarkable ldu_solve!($system) setup=(initialize!($system))
 SUITE["sparse_lu"] = @benchmarkable lu_solve!($system) setup=(initialize!($system))

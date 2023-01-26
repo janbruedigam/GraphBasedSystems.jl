@@ -22,15 +22,20 @@ function lu_factorization!(system::System)
     diagonal_inverses = system.diagonal_inverses
     acyclic_children = system.acyclic_children
     cyclic_children = system.cyclic_children
+    actives = system.actives
 
     reset_inverse_diagonals!(system)
 
     for v in system.dfs_list
+        !actives[v] && continue
         for c in acyclic_children[v]
+            !actives[c] && continue
             lu_factorization_acyclic!(matrix_entries[v,v], matrix_entries[v,c], matrix_entries[c,c], matrix_entries[c,v], diagonal_inverses[c])
         end
         for c in cyclic_children[v]
+            !actives[c] && continue
             for cc in cyclic_children[v]
+                !actives[cc] && continue
                 cc == c && break 
                 (cc ∉ acyclic_children[c] && cc ∉ cyclic_children[c]) && continue
                 lu_factorization_cyclic!(matrix_entries[v,c], matrix_entries[v,cc], matrix_entries[cc,c])
@@ -67,17 +72,23 @@ function lu_backsubstitution!(system::System)
     cyclic_children = system.cyclic_children
     parents = system.parents
     dfs_list = system.dfs_list
+    actives = system.actives
 
     for v in dfs_list
+        !actives[v] && continue
         for c in cyclic_children[v]
+            !actives[c] && continue
             lu_backsubstitution_l!(vector_entries[v], matrix_entries[v,c], vector_entries[c])
         end
         for c in acyclic_children[v]
+            !actives[c] && continue
             lu_backsubstitution_l!(vector_entries[v], matrix_entries[v,c], vector_entries[c])
         end
     end
     for v in reverse(dfs_list)
+        !actives[v] && continue
         for p in parents[v]
+            !actives[p] && continue
             lu_backsubstitution_u!(vector_entries[v], matrix_entries[v,p], vector_entries[p])
         end
         lu_backsubstitution_d!(vector_entries[v], matrix_entries[v,v], diagonal_inverses[v])
