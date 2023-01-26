@@ -2,9 +2,9 @@
 [![Build Status](https://github.com/janbruedigam/GraphBasedSystems.jl/workflows/CI/badge.svg)](https://github.com/janbruedigam/GraphBasedSystems.jl/actions?query=workflow%3ACI)
 [![codecov](https://codecov.io/gh/janbruedigam/GraphBasedSystems.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/janbruedigam/GraphBasedSystems.jl)
 
-A package for efficiently solving linear systems of equations based on graph properties. Any matrix representing an underlying real-world system can be represented by a graph, for example a mechanical system, chemical molecules, neural networks, ... The code of the package is currently used for the robotics simulator [Dojo.jl](https://github.com/dojo-sim/Dojo.jl)
+A package for efficiently solving block-based linear systems of equations based on graph properties. Any matrix representing an underlying real-world system can be represented by a graph, for example mechanical system, robots, chemical molecules, ... The package is currently used for the robotics simulator [Dojo.jl](https://github.com/dojo-sim/Dojo.jl)
 
-By providing the adjacency matrix of a graph-based system, the `GraphBasedSystems` package can automatically exploit the existing sparsity when solving the linear system to speed up calculations. Currently, the LDU, LU, LDLt, and LLt decomposition/backsubstitution are implemented. LLt is currently slow due to memory allocations.
+By providing the adjacency matrix of a graph-based system, the `GraphBasedSystems` package can automatically exploit existing sparsity when solving the linear system to speed up calculations. Currently, the LDU, LU, LDLt, and LLt decomposition/backsubstitution are implemented. LLt is currently slow due to memory allocations.
 
 ```julia
 using GraphBasedSystems
