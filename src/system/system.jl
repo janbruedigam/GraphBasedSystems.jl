@@ -1,13 +1,14 @@
 abstract type Symmetric end
 abstract type Unsymmetric end
 
-struct System{N,S}
+mutable struct System{N,S}
     matrix_entries::SparseMatrixCSC{Entry, Int64} # matrix entries of the system
     vector_entries::Vector{Entry}                                   # vector entries of the system
     diagonal_inverses::Vector{Entry}                                # stores inverses of diagonal matrix entries once calculated
     acyclic_children::Vector{Vector{Int64}} # contains direct children that are not part of a cycle
     cyclic_children::Vector{Vector{Int64}}  # contains direct and indirect children that are part of a cycle (in dfs_list order)
     parents::Vector{Vector{Int64}}          # contains direct and cycle-opening parents
+    active::SVector{N,Bool}                 # indicates if the node should be considered or not
     dfs_list::SVector{N,Int64}      # depth-first search list of nodes [last-found node, ..., first-found node]
     graph::SimpleGraph{Int64}       # the graph built from the adjacency matrix
     dfs_graph::SimpleDiGraph{Int64} # the directed graph built from the depth-first search
@@ -80,7 +81,7 @@ struct System{N,S}
         cyclic_children = [unique(vcat(cycles[i]...)) for i=1:N]
         cyclic_children = [intersect(dfs_list, cyclic_children[i]) for i=1:N]
 
-        new{N,S}(matrix_entries, vector_entries, diagonal_inverses, acyclic_children, cyclic_children, parents, dfs_list, full_graph, full_dfs_graph, dims)
+        new{N,S}(matrix_entries, vector_entries, diagonal_inverses, acyclic_children, cyclic_children, parents, sones(Bool, N), dfs_list, full_graph, full_dfs_graph, dims)
     end
 
     System(A, dims; force_static = false, symmetric = false) = System{Float64}(A, dims; force_static, symmetric)
