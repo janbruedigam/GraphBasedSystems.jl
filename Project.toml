@@ -1,7 +1,7 @@
 name = "GraphBasedSystems"
 uuid = "c7b9bcad-ccd7-4721-b0c6-1499c55cf356"
 authors = ["Jan Bruedigam"]
-version = "1.1.0"
+version = "1.2.0"
 
 [deps]
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
